@@ -1,7 +1,6 @@
 use std::{fs::File, io::BufReader};
 
 use pgn_reader::{BufferedReader, SanPlus, Skip};
-
 struct GameReader {
     moves: usize,
     total_games: usize,
@@ -38,26 +37,15 @@ impl pgn_reader::Visitor for GameReader {
         // convert the raw comment into a string slice
         let comment_str = std::str::from_utf8(comment.as_bytes()).unwrap();
 
-        // remove the square brackets
-        let cleaned = comment_str.replace(&['[', ']'][..], "");
+        // r"(?!%clk (\d:\d{2}:\d{2}))"
+        let cleaned = comment_str.replace(r"(?!\d:\d{2}:\d{2})", "");
         // split by spaces
         let split_vec: Vec<&str> = cleaned.split(' ').collect();
 
         // iterate
-        let mut previous_time = 0;
-        for (i, term) in split_vec.iter().enumerate() {
-            // if the current term in the comment indicates remaining time, with %clk,
-            // then...
 
-            if *term == "%clk" {
-                // the next element in the vec following %clk is always the remaining time in h:mm:ss
-                // TODO: fix unwrap
-                let remaining_time = *split_vec.get(i + 1).unwrap();
-                let total_remaining = convert_time(remaining_time);
-                let delta_time = previous_time - total_remaining;
-                println!("{}", delta_time);
-                previous_time = total_remaining;
-            }
+        for (i, term) in split_vec.iter().enumerate() {
+            println!("{}", term)
         }
     }
 }
