@@ -60,7 +60,7 @@ impl Visitor for GameReader {
     }
     fn end_headers(&mut self) -> Skip {
         if self.time_control != "600+0"
-            || !(self.rating > 0 && self.rating < 1000)
+            || !(self.rating > 1000 && self.rating < 2000)
             || self.total_games >= 1000
         {
             return Skip(true);
@@ -123,7 +123,14 @@ fn convert_time(time: &str) -> i32 {
     let seconds = str::parse::<i32>(units.get(2).unwrap()).unwrap();
     hours * 3600 + minutes * 60 + seconds
 }
-
+/* each point could be
+// - (time left, delta time)
+//      = one point per move
+// - (time left, average time for x)
+//      = one point per x axis value <- like this one the best so far
+// - (time left, averave time taken per move per game)
+//      = one point per game
+*/
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // current parent directory
     let current = std::env::current_dir()?;
