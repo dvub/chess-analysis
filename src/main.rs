@@ -1,4 +1,9 @@
-use std::{collections::HashMap, fs::File, io::BufReader};
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::BufReader,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use pgn_reader::{BufferedReader, SanPlus, Skip, Visitor};
 use plotters::prelude::*;
@@ -8,6 +13,8 @@ struct GameReader {
     all_times: Vec<i32>,
     time_map: HashMap<i32, Vec<i32>>,
     time_control_offset: i32,
+    time_control: String,
+    rating: i32,
 }
 impl GameReader {
     fn new() -> GameReader {
@@ -17,6 +24,8 @@ impl GameReader {
             all_times: Vec::new(),
             time_map: HashMap::new(),
             time_control_offset: 0,
+            time_control: "".to_string(),
+            rating: 0,
         }
     }
 }
@@ -25,8 +34,8 @@ impl Visitor for GameReader {
     type Result = usize;
 
     fn begin_game(&mut self) {
+        println!("Analyzing the {}th game", self.total_games + 1);
         self.moves = 0;
-        self.total_games += 1;
     }
 
     fn san(&mut self, _san_plus: SanPlus) {
@@ -39,12 +48,27 @@ impl Visitor for GameReader {
 
     fn header(&mut self, key: &[u8], value: pgn_reader::RawHeader<'_>) {
         let str = std::str::from_utf8(key).unwrap();
+        let value_str = std::str::from_utf8(value.0).unwrap();
         if str == "TimeControl" {
-            let value_str = std::str::from_utf8(value.0).unwrap();
-
-            let offset = value_str.split('+').nth(1).unwrap();
+            let offset = value_str.split('+').nth(1).unwrap_or("0");
             self.time_control_offset = offset.parse().unwrap();
+            self.time_control = value_str.to_string();
         }
+
+        if str == "WhiteElo" || str == "BlackElo" {
+            self.rating = value_str.parse::<i32>().unwrap();
+        }
+    }
+    fn end_headers(&mut self) -> Skip {
+        if self.time_control.is_empty() {
+            println!("fuck you!!");
+        }
+
+        if self.time_control != "600+0" || !(self.rating > 1500 && self.rating < 2000) {
+            return Skip(true);
+        }
+        self.total_games += 1;
+        Skip(false)
     }
 
     // once a game is over, we want to use all the times we collected
@@ -107,7 +131,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let current = std::env::current_dir()?;
 
     // get the correct game file within games directory
-    let file_name = "games/sample.pgn";
+    let file_name = "games/oct-2023-games.pgn";
     let file = current.join(file_name);
 
     // open
@@ -124,33 +148,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         game_reader.total_games
     );
 
-    println!("{:?}", game_reader.time_map);
+    // TODO: probably dont get keys twice.
+    let min_x = *game_reader.time_map.keys().min().unwrap();
+    let max_x = *game_reader.time_map.keys().max().unwrap();
 
-    let root = BitMapBackend::new("graphs/0.png", (1920, 1080)).into_drawing_area();
+    // TODO: DON't flatten twice you stupid fucking idiot
+    let min_y = *game_reader.time_map.values().flatten().min().unwrap();
+    let max_y = *game_reader.time_map.values().flatten().max().unwrap();
+
+    let time = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let file = format!("graphs/{}.png", time);
+    let root = BitMapBackend::new(file.as_str(), (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
-        // .caption("y=x^2", ("sans-serif", 50).into_font())
-        .margin(5)
+        .caption("Time Analysis", ("sans-serif", 35).into_font())
+        .margin(10)
         .x_label_area_size(30)
         .y_label_area_size(30)
-        .build_cartesian_2d(0f32..670f32, 0f32..670f32)?;
+        .build_cartesian_2d(min_x..max_x, min_y..max_y)?;
 
     chart.configure_mesh().draw()?;
-    chart
-        .draw_series(game_reader.time_map.iter().map(|(x, y_values)| {
-            Circle::new(
-                (*x as f32, *y_values.first().unwrap() as f32),
-                2,
-                GREEN.filled(),
-            )
-        }))
-        .unwrap();
 
-    chart
-        .configure_series_labels()
-        .background_style(WHITE.mix(0.8))
-        .border_style(BLACK)
-        .draw()?;
+    let points_iter = game_reader.time_map.iter().flat_map(|(x, y_values)| {
+        y_values
+            .iter()
+            .map(|y| Circle::new((*x, *y), 2, GREEN.filled()))
+    });
+
+    chart.draw_series(points_iter).unwrap();
 
     root.present()?;
 
