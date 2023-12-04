@@ -34,7 +34,6 @@ impl Visitor for GameReader {
     type Result = usize;
 
     fn begin_game(&mut self) {
-        println!("Analyzing the {}th game", self.total_games + 1);
         self.moves = 0;
     }
 
@@ -60,11 +59,10 @@ impl Visitor for GameReader {
         }
     }
     fn end_headers(&mut self) -> Skip {
-        if self.time_control.is_empty() {
-            println!("fuck you!!");
-        }
-
-        if self.time_control != "600+0" || !(self.rating > 1500 && self.rating < 2000) {
+        if self.time_control != "600+0"
+            || !(self.rating > 0 && self.rating < 1000)
+            || self.total_games >= 1000
+        {
             return Skip(true);
         }
         self.total_games += 1;
@@ -168,14 +166,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .margin(10)
         .x_label_area_size(30)
         .y_label_area_size(30)
-        .build_cartesian_2d(min_x..max_x, min_y..max_y)?;
+        .build_cartesian_2d(max_x..min_x, 0..100)?;
 
     chart.configure_mesh().draw()?;
 
-    let points_iter = game_reader.time_map.iter().flat_map(|(x, y_values)| {
-        y_values
-            .iter()
-            .map(|y| Circle::new((*x, *y), 2, GREEN.filled()))
+    let points_iter = game_reader.time_map.iter().map(|(x, y_values)| {
+        /*y_values
+        .iter()
+        .map(|y| Circle::new((*x, *y), 2, GREEN.filled()))
+        */
+        let y: i32 = y_values.iter().sum::<i32>() / y_values.len() as i32;
+        Circle::new((*x, y), 2, GREEN.filled())
     });
 
     chart.draw_series(points_iter).unwrap();
