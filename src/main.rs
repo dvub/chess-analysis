@@ -30,6 +30,7 @@ use reader::GameReader;
 
 // cargo run --release -- games/oct-2023-games.pgn -m 1000 --min-rating 1000 --max-rating 2000 --time-control 600+0
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // TODO: arg validation
     let args = Args::parse();
     // open the file parsed from clap
     let games = File::open(&args.path).expect("Error reading PGN file. :( Exiting...");
@@ -55,12 +56,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // plot shit
 
     // TODO: probably dont get keys twice.
-    let min_x = *game_reader.time_map.keys().min().unwrap();
     let max_x = *game_reader.time_map.keys().max().unwrap();
-
     // TODO: DON't flatten twice you stupid fucking idiot
     // let min_y = *game_reader.time_map.values().flatten().min().unwrap();
     // let max_y = *game_reader.time_map.values().flatten().max().unwrap();
+
+    let max_y = game_reader
+        .time_map
+        .iter()
+        .map(|(_, y_values)| y_values.iter().sum::<i32>() / y_values.len() as i32)
+        .max()
+        .unwrap();
 
     let time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -71,18 +77,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
         .caption("Time Analysis", ("sans-serif", 35).into_font())
-        .margin(10)
+        .margin(20)
         .x_label_area_size(30)
         .y_label_area_size(30)
-        .build_cartesian_2d(max_x..min_x, 0..100)?;
+        .build_cartesian_2d(max_x..0, 0..max_y)?;
 
-    chart.configure_mesh().draw()?;
+    chart
+        .configure_mesh()
+        .y_desc("Average Time to Move for a Given X (S)")
+        .x_desc("Time Left on Player Clock (S)")
+        .axis_desc_style(("sans-serif", 10))
+        .draw()?;
 
     let points_iter = game_reader.time_map.iter().map(|(x, y_values)| {
         /*y_values
         .iter()
         .map(|y| Circle::new((*x, *y), 2, GREEN.filled()))
         */
+        // MEDIAN
+        // let y = y_values.get(y_values.len() / 2).unwrap();
+        // AVERAGE for each X
         let y: i32 = y_values.iter().sum::<i32>() / y_values.len() as i32;
         Circle::new((*x, y), 2, GREEN.filled())
     });

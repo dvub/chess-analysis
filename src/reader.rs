@@ -4,13 +4,14 @@ use std::collections::HashMap;
 
 pub struct GameReader {
     pub total_games: usize,
-    pub all_times: Vec<i32>,
     pub time_map: HashMap<i32, Vec<i32>>,
-    pub time_control_offset: i32,
-    pub skip: bool,
-    pub args: Args,
-    pub time_control: String,
-    pub average_rating: i32,
+    // private, for data measurement to be passed between pgn-reader functions
+    all_times: Vec<i32>,
+    time_control_offset: i32,
+    max_allowed_time: i32,
+    args: Args,
+    time_control: String,
+    average_rating: i32,
 }
 
 impl GameReader {
@@ -20,7 +21,7 @@ impl GameReader {
             all_times: Vec::new(),
             time_map: HashMap::new(),
             time_control_offset: 0,
-            skip: false,
+            max_allowed_time: 0,
             args,
             time_control: "".to_string(),
             average_rating: 0,
@@ -39,12 +40,14 @@ impl Visitor for GameReader {
     fn header(&mut self, key: &[u8], value: pgn_reader::RawHeader<'_>) {
         let key = std::str::from_utf8(key).unwrap();
         let value = std::str::from_utf8(value.0).unwrap();
-        if key == "TimeControl" {
-            let offset = value.split('+').nth(1).unwrap_or("0");
-            self.time_control_offset = offset.parse().unwrap();
+        // if it doesn't have +, it's empty, so it's just "-"
+        if key == "TimeControl" && value.contains('+') {
+            // find the
+            let time_control = value.split('+').collect::<Vec<&str>>();
+            self.time_control_offset = time_control.get(1).unwrap().parse().unwrap();
+            self.max_allowed_time = time_control.get(0).unwrap().parse().unwrap();
             self.time_control = value.to_string();
         }
-
         if key == "WhiteElo" || key == "BlackElo" {
             self.average_rating += str::parse::<i32>(value).unwrap();
         }
@@ -54,20 +57,31 @@ impl Visitor for GameReader {
     // so we tell it to skip if that's true
     fn end_headers(&mut self) -> Skip {
         // actually take the average lol
-        self.average_rating /= 2;
+        let avg = self.average_rating / 2;
+        // reset
 
-        // THIS PART IS BROKEN AS FUCK
-        if (self.args.time_control.is_some()
-            && &self.time_control != self.args.time_control.as_ref().unwrap())
-            || (self.args.min_rating.is_some()
-                && self.average_rating < self.args.min_rating.unwrap())
-            || (self.args.max_rating.is_some()
-                && self.average_rating > self.args.max_rating.unwrap())
-            || (self.args.max_games.is_some() && self.total_games >= self.args.max_games.unwrap())
-        {
-            return Skip(true);
+        self.average_rating = 0;
+
+        if let Some(time_control) = &self.args.time_control {
+            if self.time_control != *time_control {
+                return Skip(true);
+            }
         }
-
+        if let Some(rating) = self.args.min_rating {
+            if avg < rating {
+                return Skip(true);
+            }
+        }
+        if let Some(rating) = self.args.max_rating {
+            if avg > rating {
+                return Skip(true);
+            }
+        }
+        if let Some(max_games) = self.args.max_games {
+            if self.total_games >= max_games {
+                return Skip(true);
+            }
+        }
         Skip(false)
     }
 
@@ -81,14 +95,27 @@ impl Visitor for GameReader {
         let mut prev_time = *self.all_times.first().unwrap();
 
         //
-        for time in self.all_times.iter().step_by(2) {
-            let remaining_time = *time;
-            let delta_time = prev_time - (time - self.time_control_offset);
+        for time in self.all_times.iter().skip(2).step_by(2) {
+            if *time <= self.max_allowed_time {
+                let remaining_time = *time;
+                let delta_time = prev_time - (time - self.time_control_offset);
+                self.time_map
+                    .entry(remaining_time)
+                    .or_default()
+                    .push(delta_time);
+            }
 
-            self.time_map
-                .entry(remaining_time)
-                .or_default()
-                .push(delta_time);
+            prev_time = *time;
+        }
+        for time in self.all_times.iter().skip(1).step_by(2) {
+            if *time <= self.max_allowed_time {
+                let remaining_time = *time;
+                let delta_time = prev_time - (time - self.time_control_offset);
+                self.time_map
+                    .entry(remaining_time)
+                    .or_default()
+                    .push(delta_time);
+            }
 
             prev_time = *time;
         }
@@ -96,6 +123,8 @@ impl Visitor for GameReader {
         // cleanup, whatever
         self.all_times.clear();
         self.total_games += 1;
+        println!("{}", self.total_games);
+
         self.total_games
     }
     // in a game, we want to collect all of the times for each move,
