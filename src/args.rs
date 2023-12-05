@@ -8,8 +8,6 @@ use clap::Parser;
 pub struct Args {
     /// Path to PGN file. The PGN file may contain one or more games.
     pub input: String,
-    /// Output path. Creates a new directory in this path (named the current UNIX timestamp) with both a PGN and SVG.
-    pub output: String,
 
     /// The maximum number of games to collect data from.
     /// (NOTE: The reader will read games past the limit but will not record any data from them, due to the nature of pgn-reader)
