@@ -9,6 +9,8 @@ pub struct GameReader {
     pub time_control_offset: i32,
     pub skip: bool,
     pub args: Args,
+    pub time_control: String,
+    pub average_rating: i32,
 }
 
 impl GameReader {
@@ -20,6 +22,8 @@ impl GameReader {
             time_control_offset: 0,
             skip: false,
             args,
+            time_control: "".to_string(),
+            average_rating: 0,
         }
     }
 }
@@ -31,61 +35,39 @@ impl Visitor for GameReader {
     fn begin_variation(&mut self) -> Skip {
         Skip(true) // stay in the mainline
     }
+    fn begin_headers(&mut self) {}
 
     // first of all, we will read the headers to determine if we should even read this game.
     fn header(&mut self, key: &[u8], value: pgn_reader::RawHeader<'_>) {
-        let max_games = self.args.max_games;
-        let desired_tc = &self.args.time_control;
-        let min_rating = self.args.min_rating;
-        let max_rating = self.args.max_rating;
-
         let key = std::str::from_utf8(key).unwrap();
         let value = std::str::from_utf8(value.0).unwrap();
-
-        // we're doing 2 things here:
-        // 1. get the time control offset, which is how much time a player GETS for moving
-        //      we need to know this to find the actual time the player took to make a move in this kind of tc mode
-        // 2. validate that the tc mode is the one we want
         if key == "TimeControl" {
-            if desired_tc.is_some() && value == desired_tc.as_ref().unwrap() {
-                let offset = value.split('+').nth(1).unwrap_or("0");
-                self.time_control_offset = offset.parse().unwrap();
-            } else {
-                self.skip = true;
-                return;
-            }
+            let offset = value.split('+').nth(1).unwrap_or("0");
+            self.time_control_offset = offset.parse().unwrap();
+            self.time_control = value.to_string();
         }
-        // here we'll check rating of each player
-        // we then make sure it's in the range by averaging
-        let mut white_rating = 0;
-        let mut black_rating = 0;
+
         if key == "WhiteElo" {
-            white_rating = value.parse::<i32>().unwrap();
+            self.average_rating += str::parse::<i32>(value).unwrap();
         }
         if key == "BlackElo" {
-            black_rating = value.parse::<i32>().unwrap();
+            self.average_rating += str::parse::<i32>(value).unwrap();
+            self.average_rating /= 2;
         }
-        let average_rating = white_rating + black_rating / 2;
-        // evaluate filters/constraints to know if we should read the time data from this game.
 
-        // TODO:
-        // there may be a better way to do this
-        // using short circuit to check if some
-        if (max_rating.is_some() && average_rating > max_rating.unwrap())
-            || (min_rating.is_some() && average_rating < min_rating.unwrap())
-            || (max_games.is_some() && self.total_games >= max_games.unwrap())
-        {
-            self.skip = true;
-        }
+        println!("{}", self.average_rating);
     }
     // now that we've read the game headers
     // we have the necessary info to determine whether to skip reading the game
     // so we tell it to skip if that's true
     fn end_headers(&mut self) -> Skip {
-        if self.skip {
+        if self.time_control != "600+0"
+            || self.average_rating < 1000
+            || self.average_rating > 2000
+            || self.total_games >= 1000
+        {
             return Skip(true);
         }
-        println!("Reading the {}th game", self.total_games + 1);
         Skip(false)
     }
 
@@ -96,19 +78,19 @@ impl Visitor for GameReader {
             return self.total_games;
         }
         // initialize a prev value for calculating deltas
-        let mut last_time = *self.all_times.first().unwrap();
+        let mut prev_time = *self.all_times.first().unwrap();
 
         //
         for time in self.all_times.iter().step_by(2) {
             let remaining_time = *time;
-            let delta_time = last_time - (time - self.time_control_offset);
+            let delta_time = prev_time - (time - self.time_control_offset);
 
             self.time_map
                 .entry(remaining_time)
                 .or_default()
                 .push(delta_time);
 
-            last_time = *time;
+            prev_time = *time;
         }
 
         // cleanup, whatever

@@ -31,7 +31,6 @@ use reader::GameReader;
 // cargo run --release -- games/oct-2023-games.pgn -m 1000 --min-rating 1000 --max-rating 2000 --time-control 600+0
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-
     // open the file parsed from clap
     let games = File::open(&args.path).expect("Error reading PGN file. :( Exiting...");
     // open a bufreader
