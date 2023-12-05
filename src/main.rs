@@ -165,8 +165,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let file = format!("graphs/{}.png", time);
-    let root = BitMapBackend::new(file.as_str(), (640, 480)).into_drawing_area();
+    let file = format!("graphs/{}.svg", time);
+    let root = SVGBackend::new(file.as_str(), (640, 480)).into_drawing_area();
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
         .caption("Time Analysis", ("sans-serif", 35).into_font())
