@@ -35,8 +35,6 @@ impl Visitor for GameReader {
     fn begin_variation(&mut self) -> Skip {
         Skip(true) // stay in the mainline
     }
-    fn begin_headers(&mut self) {}
-
     // first of all, we will read the headers to determine if we should even read this game.
     fn header(&mut self, key: &[u8], value: pgn_reader::RawHeader<'_>) {
         let key = std::str::from_utf8(key).unwrap();
@@ -47,27 +45,29 @@ impl Visitor for GameReader {
             self.time_control = value.to_string();
         }
 
-        if key == "WhiteElo" {
+        if key == "WhiteElo" || key == "BlackElo" {
             self.average_rating += str::parse::<i32>(value).unwrap();
         }
-        if key == "BlackElo" {
-            self.average_rating += str::parse::<i32>(value).unwrap();
-            self.average_rating /= 2;
-        }
-
-        println!("{}", self.average_rating);
     }
     // now that we've read the game headers
     // we have the necessary info to determine whether to skip reading the game
     // so we tell it to skip if that's true
     fn end_headers(&mut self) -> Skip {
-        if self.time_control != "600+0"
-            || self.average_rating < 1000
-            || self.average_rating > 2000
-            || self.total_games >= 1000
+        // actually take the average lol
+        self.average_rating /= 2;
+
+        // THIS PART IS BROKEN AS FUCK
+        if (self.args.time_control.is_some()
+            && &self.time_control != self.args.time_control.as_ref().unwrap())
+            || (self.args.min_rating.is_some()
+                && self.average_rating < self.args.min_rating.unwrap())
+            || (self.args.max_rating.is_some()
+                && self.average_rating > self.args.max_rating.unwrap())
+            || (self.args.max_games.is_some() && self.total_games >= self.args.max_games.unwrap())
         {
             return Skip(true);
         }
+
         Skip(false)
     }
 
