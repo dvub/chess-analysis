@@ -1,16 +1,14 @@
-use std::{
-    fs::File,
-    io::BufReader,
-    time::{SystemTime, UNIX_EPOCH},
-};
-
 use clap::Parser;
 use pgn_reader::BufferedReader;
-use plotters::prelude::*;
+use std::{fs::File, io::BufReader};
+
 mod args;
+mod plotter;
 mod reader;
 use args::Args;
 use reader::GameReader;
+
+use crate::plotter::var_plot;
 
 /* each point could be
 // - (time left, delta time)
@@ -22,8 +20,8 @@ use reader::GameReader;
 */
 
 // TODO:
-// break into smaller files
-// implement clap
+// - [x] break into smaller files
+// - [ ] implement clap
 // refactor & Optimize
 // export into BOTH pgn and svg
 // idk what else lol.
@@ -33,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: arg validation
     let args = Args::parse();
     // open the file parsed from clap
-    let games = File::open(&args.path).expect("Error reading PGN file. :( Exiting...");
+    let games = File::open(&args.input).expect("Error reading PGN file. :( Exiting...");
     // open a bufreader
     let buf = BufReader::new(games);
     println!("Successfully found PGN file!");
@@ -52,58 +50,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     println!();
-    println!("Now creating plot of data...");
-    // plot shit
+    println!("Now creating plot of data... This shouldn't take long. ");
 
-    // TODO: probably dont get keys twice.
-    let max_x = *game_reader.time_map.keys().max().unwrap();
-    // TODO: DON't flatten twice you stupid fucking idiot
-    // let min_y = *game_reader.time_map.values().flatten().min().unwrap();
-    // let max_y = *game_reader.time_map.values().flatten().max().unwrap();
+    var_plot(game_reader)?;
 
-    let max_y = game_reader
-        .time_map
-        .iter()
-        .map(|(_, y_values)| y_values.iter().sum::<i32>() / y_values.len() as i32)
-        .max()
-        .unwrap();
-
-    let time = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let file = format!("graphs/{}.svg", time);
-    let root = SVGBackend::new(file.as_str(), (640, 480)).into_drawing_area();
-    root.fill(&WHITE)?;
-    let mut chart = ChartBuilder::on(&root)
-        .caption("Time Analysis", ("sans-serif", 35).into_font())
-        .margin(20)
-        .x_label_area_size(30)
-        .y_label_area_size(30)
-        .build_cartesian_2d(max_x..0, 0..max_y)?;
-
-    chart
-        .configure_mesh()
-        .y_desc("Average Time to Move for a Given X (S)")
-        .x_desc("Time Left on Player Clock (S)")
-        .axis_desc_style(("sans-serif", 10))
-        .draw()?;
-
-    let points_iter = game_reader.time_map.iter().map(|(x, y_values)| {
-        /*y_values
-        .iter()
-        .map(|y| Circle::new((*x, *y), 2, GREEN.filled()))
-        */
-        // MEDIAN
-        // let y = y_values.get(y_values.len() / 2).unwrap();
-        // AVERAGE for each X
-        let y: i32 = y_values.iter().sum::<i32>() / y_values.len() as i32;
-        Circle::new((*x, y), 2, GREEN.filled())
-    });
-
-    chart.draw_series(points_iter).unwrap();
-
-    root.present()?;
     println!("Successfully generated a plot.");
     Ok(())
 }

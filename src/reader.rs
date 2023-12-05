@@ -5,11 +5,11 @@ use std::collections::HashMap;
 pub struct GameReader {
     pub total_games: usize,
     pub time_map: HashMap<i32, Vec<i32>>,
+    pub args: Args,
     // private, for data measurement to be passed between pgn-reader functions
     all_times: Vec<i32>,
     time_control_offset: i32,
     max_allowed_time: i32,
-    args: Args,
     time_control: String,
     average_rating: i32,
 }
