@@ -91,33 +91,16 @@ impl Visitor for GameReader {
         if self.all_times.is_empty() {
             return self.total_games;
         }
-        // initialize a prev value for calculating deltas
-        let mut prev_time = *self.all_times.first().unwrap();
-
-        //
-        for time in self.all_times.iter().skip(2).step_by(2) {
-            if *time <= self.max_allowed_time {
-                let remaining_time = *time;
-                let delta_time = prev_time - (time - self.time_control_offset);
+        // TIL: in order for skip to work and use i - 2, skip has to be at the end.
+        for (i, remaining_time) in self.all_times.iter().enumerate().skip(2) {
+            if *remaining_time <= self.max_allowed_time {
+                let delta_time = self.all_times.get(i - 2).unwrap()
+                    - (remaining_time - self.time_control_offset);
                 self.time_map
-                    .entry(remaining_time)
+                    .entry(*remaining_time)
                     .or_default()
                     .push(delta_time);
             }
-
-            prev_time = *time;
-        }
-        for time in self.all_times.iter().skip(1).step_by(2) {
-            if *time <= self.max_allowed_time {
-                let remaining_time = *time;
-                let delta_time = prev_time - (time - self.time_control_offset);
-                self.time_map
-                    .entry(remaining_time)
-                    .or_default()
-                    .push(delta_time);
-            }
-
-            prev_time = *time;
         }
 
         // cleanup, whatever
