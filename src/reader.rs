@@ -1,9 +1,8 @@
 use crate::args::Args;
-use pgn_reader::{SanPlus, Skip, Visitor};
+use pgn_reader::{Skip, Visitor};
 use std::collections::HashMap;
 
 pub struct GameReader {
-    pub moves: usize,
     pub total_games: usize,
     pub all_times: Vec<i32>,
     pub time_map: HashMap<i32, Vec<i32>>,
@@ -15,7 +14,6 @@ pub struct GameReader {
 impl GameReader {
     pub fn new(args: Args) -> GameReader {
         GameReader {
-            moves: 0,
             total_games: 0,
             all_times: Vec::new(),
             time_map: HashMap::new(),
@@ -29,23 +27,17 @@ impl GameReader {
 impl Visitor for GameReader {
     type Result = usize;
 
-    fn begin_game(&mut self) {
-        self.moves = 0;
-    }
-
-    fn san(&mut self, _san_plus: SanPlus) {
-        self.moves += 1;
-    }
-
+    // honestly probably not necessary, but left it in here from the docs
     fn begin_variation(&mut self) -> Skip {
         Skip(true) // stay in the mainline
     }
 
+    // first of all, we will read the headers to determine if we should even read this game.
     fn header(&mut self, key: &[u8], value: pgn_reader::RawHeader<'_>) {
-        let max_games = 1000;
-        let desired_tc = "600+0";
-        let min_rating = 1000;
-        let max_rating = 2000;
+        let max_games = self.args.max_games;
+        let desired_tc = &self.args.time_control;
+        let min_rating = self.args.min_rating;
+        let max_rating = self.args.max_rating;
 
         let key = std::str::from_utf8(key).unwrap();
         let value = std::str::from_utf8(value.0).unwrap();
@@ -54,12 +46,13 @@ impl Visitor for GameReader {
         // 1. get the time control offset, which is how much time a player GETS for moving
         //      we need to know this to find the actual time the player took to make a move in this kind of tc mode
         // 2. validate that the tc mode is the one we want
-        let mut time_control = "";
         if key == "TimeControl" {
-            time_control = value;
-            if value == desired_tc {
+            if desired_tc.is_some() && value == desired_tc.as_ref().unwrap() {
                 let offset = value.split('+').nth(1).unwrap_or("0");
                 self.time_control_offset = offset.parse().unwrap();
+            } else {
+                self.skip = true;
+                return;
             }
         }
         // here we'll check rating of each player
@@ -74,9 +67,13 @@ impl Visitor for GameReader {
         }
         let average_rating = white_rating + black_rating / 2;
         // evaluate filters/constraints to know if we should read the time data from this game.
-        if time_control != desired_tc
-            || !(average_rating > min_rating && average_rating < max_rating)
-            || self.total_games >= max_games
+
+        // TODO:
+        // there may be a better way to do this
+        // using short circuit to check if some
+        if (max_rating.is_some() && average_rating > max_rating.unwrap())
+            || (min_rating.is_some() && average_rating < min_rating.unwrap())
+            || (max_games.is_some() && self.total_games >= max_games.unwrap())
         {
             self.skip = true;
         }
@@ -88,7 +85,7 @@ impl Visitor for GameReader {
         if self.skip {
             return Skip(true);
         }
-
+        println!("Reading the {}th game", self.total_games + 1);
         Skip(false)
     }
 
@@ -116,6 +113,7 @@ impl Visitor for GameReader {
 
         // cleanup, whatever
         self.all_times.clear();
+        self.total_games += 1;
         self.total_games
     }
     // in a game, we want to collect all of the times for each move,

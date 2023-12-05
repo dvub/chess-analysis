@@ -27,24 +27,24 @@ use reader::GameReader;
 // refactor & Optimize
 // export into BOTH pgn and svg
 // idk what else lol.
+
+// cargo run --release -- games/oct-2023-games.pgn -m 1000 --min-rating 1000 --max-rating 2000 --time-control 600+0
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    // current parent directory
-    let current = std::env::current_dir()?;
-
-    // get the correct game file within games directory
-    let file_name = "games/oct-2023-games.pgn";
-    let file = current.join(file_name);
-
-    // open
-    let games = File::open(file)?;
+    // open the file parsed from clap
+    let games = File::open(&args.path).expect("Error reading PGN file. :( Exiting...");
+    // open a bufreader
     let buf = BufReader::new(games);
+    println!("Successfully found PGN file!");
+
+    // now, we will actually read the file and the games
     let mut reader = BufferedReader::new(buf);
-
     let mut game_reader = GameReader::new(args);
-
+    println!("Reading all games. This will take a moment... Or a few, if you have a lot of games.");
     reader.read_all(&mut game_reader)?;
+
+    // print some helpful information for the user
     println!("Successfully finished reading games!");
     println!(
         "A total of {} games were analyzed.",
@@ -53,14 +53,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!();
     println!("Now creating plot of data...");
+    // plot shit
 
     // TODO: probably dont get keys twice.
     let min_x = *game_reader.time_map.keys().min().unwrap();
     let max_x = *game_reader.time_map.keys().max().unwrap();
 
     // TODO: DON't flatten twice you stupid fucking idiot
-    let min_y = *game_reader.time_map.values().flatten().min().unwrap();
-    let max_y = *game_reader.time_map.values().flatten().max().unwrap();
+    // let min_y = *game_reader.time_map.values().flatten().min().unwrap();
+    // let max_y = *game_reader.time_map.values().flatten().max().unwrap();
 
     let time = SystemTime::now()
         .duration_since(UNIX_EPOCH)
