@@ -163,16 +163,16 @@ impl Visitor for GameReader {
         }
         self.total_games += 1;
         // uncomment to see how many games were printed lol
-        println!("{}", self.total_games);
+        // println!("{}", self.total_games);
     }
 }
 
 fn convert_time(time: &str) -> i32 {
     // convert time into a number of seconds
     // TODO: fix error handling
-    let units: Vec<&str> = time.split(':').collect();
-    let hours = str::parse::<i32>(units.first().unwrap()).unwrap();
-    let minutes = str::parse::<i32>(units.get(1).unwrap()).unwrap();
-    let seconds = str::parse::<i32>(units.get(2).unwrap()).unwrap();
+    let mut units = time.split(':');
+    let hours = str::parse::<i32>(units.next().unwrap()).unwrap();
+    let minutes = str::parse::<i32>(units.next().unwrap()).unwrap();
+    let seconds = str::parse::<i32>(units.next().unwrap()).unwrap();
     hours * 3600 + minutes * 60 + seconds
 }
