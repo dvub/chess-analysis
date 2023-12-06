@@ -1,16 +1,56 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
-use plotters::prelude::*;
-
 use crate::reader::GameReader;
+use plotters::{coord::Shift, prelude::*};
+use std::{
+    error::Error,
+    fs::create_dir,
+    path::PathBuf,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
-// TODO: REFACTOR INTO SMALLER PIECES
 pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error>> {
     // plot shit
 
+    let unix_timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let path = PathBuf::from(&game_reader.args.output).join(unix_timestamp.to_string());
+    create_dir(&path).unwrap();
+
+    let resolution = (640, 480);
+
+    // create both an svg AND png, because svg is not widely supported.
+    scatterplot(
+        SVGBackend::new(&path.join("2-var.svg"), resolution).into_drawing_area(),
+        &game_reader,
+    )?;
+    scatterplot(
+        BitMapBackend::new(&path.join("2-var.png"), resolution).into_drawing_area(),
+        &game_reader,
+    )?;
+
+    Ok(())
+}
+
+fn scatterplot<T>(
+    root: DrawingArea<T, Shift>,
+    game_reader: &GameReader,
+) -> Result<(), Box<dyn Error + 'static>>
+where
+    T: IntoDrawingArea,
+    <T as DrawingBackend>::ErrorType: 'static,
+{
+    let x_values: Vec<usize> = game_reader
+        .time_map
+        .iter()
+        .enumerate()
+        .map(|(i, _)| i)
+        .collect();
+
     let averages = game_reader
         .time_map
-        .values()
+        .iter()
         .map(|y_values| {
             /*y_values
             .iter()
@@ -25,7 +65,7 @@ pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error
 
     let medians = game_reader
         .time_map
-        .values()
+        .iter()
         .map(|y_values| {
             // MEDIAN
             let mut sorted_values = y_values.to_vec(); // Create a mutable copy
@@ -35,19 +75,10 @@ pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error
         .collect::<Vec<f32>>();
 
     // for graphing
-    let x_values = game_reader.time_map.keys();
-    let max_x = *x_values.max().unwrap() as f32;
+
+    let max_x = *x_values.iter().max().unwrap() as f32;
     // TODO: fix clone
     let max_y = averages.clone().into_iter().reduce(f32::max).unwrap() + 1f32;
-
-    let unix_timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-
-    let file = format!("graphs/{}.svg", unix_timestamp);
-    let root = SVGBackend::new(file.as_str(), (640, 480)).into_drawing_area();
-
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
@@ -65,15 +96,13 @@ pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error
         .draw()?;
 
     // create an iterator of points to create our scatterplot
-    let average_points = game_reader
-        .time_map
-        .keys()
+    let average_points = x_values
+        .iter()
         .zip(averages) // zip is so cool dude WHAT !!
         .map(|(x, y)| Circle::new((*x as f32, y), 2, GREEN.filled()));
 
-    let median_points = game_reader
-        .time_map
-        .keys()
+    let median_points = x_values
+        .iter()
         .zip(medians) // zip is so cool dude WHAT !!
         .map(|(x, y)| Circle::new((*x as f32, y), 2, BLUE.filled()));
 
