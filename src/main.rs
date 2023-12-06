@@ -25,6 +25,9 @@ use crate::plotter::var_plot;
 // - [ ] implement clap
 // refactor & Optimize
 // export into BOTH pgn and svg
+// document with MD
+// split code
+// actually finish the fucking assignment LMAO
 // idk what else lol.
 
 // cargo run --release -- games/oct-2023-games.pgn -m 1000 --min-rating 1000 --max-rating 2000 --time-control 600+0

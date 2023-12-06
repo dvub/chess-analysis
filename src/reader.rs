@@ -3,6 +3,7 @@ use pgn_reader::{Skip, Visitor};
 use std::collections::HashMap;
 // TODO: FIX UNWRAP HELL!
 pub struct GameReader {
+    /// Total number of games analyzed
     pub total_games: usize,
     pub time_map: HashMap<i32, Vec<i32>>,
     pub args: Args,
@@ -16,13 +17,27 @@ pub struct GameReader {
 
 impl GameReader {
     pub fn new(args: Args) -> GameReader {
+        // max allowed time will be used to filter garbage data
+        // because there is some, either by my collection methods or in the database
+        // this is a huge optimization of my original implementation
+        // so let me be proud.
+        let max_allowed_time = {
+            if let Some(tc) = args.time_control.as_ref() {
+                tc.split('+').nth(0).unwrap().parse::<i32>().unwrap()
+            } else {
+                0
+            }
+        };
+
         GameReader {
+            // important stuff
             total_games: 0,
-            all_times: Vec::new(),
             time_map: HashMap::new(),
-            time_control_offset: 0,
-            max_allowed_time: 0,
+            max_allowed_time,
             args,
+            // used for determining skips
+            all_times: Vec::new(),
+            time_control_offset: 0,
             time_control: "".to_string(),
             average_rating: 0,
         }
@@ -53,8 +68,6 @@ impl Visitor for GameReader {
             let time_control = value.split('+').collect::<Vec<&str>>();
             // offset is the time you get for making a move, if there is one
             self.time_control_offset = time_control.get(1).unwrap().parse().unwrap();
-            //
-            self.max_allowed_time = time_control.first().unwrap().parse().unwrap();
             self.time_control = value.to_string();
         } else if key == "WhiteElo" || key == "BlackElo" {
             self.average_rating += str::parse::<i32>(value).unwrap();
@@ -117,7 +130,7 @@ impl Visitor for GameReader {
 
         // TIL: in order for skip to work and use i - 2, skip has to be at the end.
         for (i, remaining_time) in self.all_times.iter().enumerate().skip(2) {
-            if *remaining_time <= self.max_allowed_time {
+            if self.max_allowed_time == 0 || *remaining_time <= self.max_allowed_time {
                 let previous_time = self.all_times.get(i - 2).unwrap();
                 let remaining = remaining_time - self.time_control_offset;
                 let delta_time = previous_time - remaining;
