@@ -4,14 +4,9 @@ use plotters::prelude::*;
 
 use crate::reader::GameReader;
 
+// TODO: REFACTOR INTO SMALLER PIECES
 pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error>> {
     // plot shit
-
-    // TODO: probably dont get keys twice.
-
-    // TODO: DON't flatten twice you stupid fucking idiot
-    // let min_y = *game_reader.time_map.values().flatten().min().unwrap();
-    // let max_y = *game_reader.time_map.values().flatten().max().unwrap();
 
     let averages = game_reader
         .time_map
@@ -28,9 +23,22 @@ pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error
         })
         .collect::<Vec<f32>>();
 
+    let medians = game_reader
+        .time_map
+        .values()
+        .map(|y_values| {
+            // MEDIAN
+            let mut sorted_values = y_values.to_vec(); // Create a mutable copy
+            sorted_values.sort();
+            *sorted_values.get(sorted_values.len() / 2).unwrap() as f32
+        })
+        .collect::<Vec<f32>>();
+
     // for graphing
-    let max_x = *game_reader.time_map.keys().max().unwrap() as f32;
-    let max_y = averages.into_iter().reduce(f32::max).unwrap() + 1f32;
+    let x_values = game_reader.time_map.keys();
+    let max_x = *x_values.max().unwrap() as f32;
+    // TODO: fix clone
+    let max_y = averages.clone().into_iter().reduce(f32::max).unwrap() + 1f32;
 
     let unix_timestamp = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -57,24 +65,21 @@ pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error
         .draw()?;
 
     // create an iterator of points to create our scatterplot
-    let points_iter = game_reader.time_map.iter().map(|(x, y_values)| {
-        /*y_values
-        .iter()
-        .map(|y| Circle::new((*x, *y), 2, GREEN.filled()))
-        */
-        // MEDIAN
-        // let y = y_values.get(y_values.len() / 2).unwrap();
-        // AVERAGE for each X
-        let count = y_values.len() as f32;
-        let sum: f32 = y_values.iter().sum::<i32>() as f32;
-        // average is sum / number of items
-        let y = sum / count;
-        // return a circle
-        Circle::new((*x as f32, y), 2, GREEN.filled())
-    });
+    let average_points = game_reader
+        .time_map
+        .keys()
+        .zip(averages) // zip is so cool dude WHAT !!
+        .map(|(x, y)| Circle::new((*x as f32, y), 2, GREEN.filled()));
 
-    chart.draw_series(points_iter).unwrap();
+    let median_points = game_reader
+        .time_map
+        .keys()
+        .zip(medians) // zip is so cool dude WHAT !!
+        .map(|(x, y)| Circle::new((*x as f32, y), 2, BLUE.filled()));
+
+    chart.draw_series(average_points).unwrap();
+    chart.draw_series(median_points).unwrap();
+
     root.present()?;
-
     Ok(())
 }
