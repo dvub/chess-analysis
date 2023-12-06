@@ -5,12 +5,12 @@ use pgn_reader::{Skip, Visitor};
 pub struct GameReader {
     /// Total number of games analyzed
     pub total_games: usize,
-    pub time_map: Vec<Vec<i32>>,
+    pub time_data: Vec<Vec<i32>>,
     pub args: Args,
     // private, for data measurement to be passed between pgn-reader functions
     all_times: Vec<i32>,
     time_control_offset: i32,
-    max_allowed_time: i32,
+    pub max_allowed_time: i32,
     is_skipping: bool,
 }
 
@@ -33,7 +33,7 @@ impl GameReader {
         GameReader {
             // important stuff
             total_games: 0,
-            time_map,
+            time_data: time_map,
             max_allowed_time,
             args,
             // used for determining skips
@@ -172,7 +172,7 @@ impl Visitor for GameReader {
                 let delta_time = previous_time - remaining;
 
                 // add it to our big storage place
-                self.time_map[*remaining_time as usize].push(delta_time);
+                self.time_data[*remaining_time as usize].push(delta_time);
             }
         }
         self.total_games += 1;

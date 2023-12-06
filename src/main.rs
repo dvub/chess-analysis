@@ -9,7 +9,7 @@ mod reader;
 use args::Args;
 use reader::GameReader;
 
-use crate::plotter::var_plot;
+use crate::plotter::gen_plots;
 
 /* each point could be
 // - (time left, delta time)
@@ -44,7 +44,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut reader = BufferedReader::new(buf);
     let mut game_reader = GameReader::new(args);
     println!("Reading all games. This will take a moment... Or a few, if you have a lot of games.");
-    reader.read_all(&mut game_reader)?;
+    reader
+        .read_all(&mut game_reader)
+        .unwrap_or_else(|e| println!("An error occurred reading games:\n{}", e));
 
     // print some helpful information for the user
     println!("Successfully finished reading games!");
@@ -56,7 +58,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
     println!("Now creating plot of data... This shouldn't take long. ");
 
-    var_plot(game_reader)?;
+    gen_plots(game_reader)
+        .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));
 
     println!("Successfully generated a plot.");
     Ok(())

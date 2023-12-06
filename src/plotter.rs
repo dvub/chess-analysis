@@ -7,49 +7,10 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error>> {
-    // plot shit
-
-    let unix_timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-
-    let path = PathBuf::from(&game_reader.args.output).join(unix_timestamp.to_string());
-    create_dir(&path).unwrap();
-
-    let resolution = (640, 480);
-
-    // create both an svg AND png, because svg is not widely supported.
-    scatterplot(
-        SVGBackend::new(&path.join("2-var.svg"), resolution).into_drawing_area(),
-        &game_reader,
-    )?;
-    scatterplot(
-        BitMapBackend::new(&path.join("2-var.png"), resolution).into_drawing_area(),
-        &game_reader,
-    )?;
-
-    Ok(())
-}
-
-fn scatterplot<T>(
-    root: DrawingArea<T, Shift>,
-    game_reader: &GameReader,
-) -> Result<(), Box<dyn Error + 'static>>
-where
-    T: IntoDrawingArea,
-    <T as DrawingBackend>::ErrorType: 'static,
-{
-    let x_values: Vec<usize> = game_reader
-        .time_map
-        .iter()
-        .enumerate()
-        .map(|(i, _)| i)
-        .collect();
-
+pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error>> {
+    let x_values: Vec<usize> = (0 as usize..game_reader.max_allowed_time as usize).collect();
     let averages = game_reader
-        .time_map
+        .time_data
         .iter()
         .map(|y_values| {
             /*y_values
@@ -64,16 +25,104 @@ where
         .collect::<Vec<f32>>();
 
     let medians = game_reader
-        .time_map
+        .time_data
         .iter()
         .map(|y_values| {
-            // MEDIAN
             let mut sorted_values = y_values.to_vec(); // Create a mutable copy
             sorted_values.sort();
-            *sorted_values.get(sorted_values.len() / 2).unwrap() as f32
+            sorted_values[sorted_values.len() / 2] as f32
         })
         .collect::<Vec<f32>>();
 
+    let resolution = (640, 480);
+    let path = gen_path(&game_reader.args.output)?;
+    // create both an svg AND png, because svg is not widely supported.
+    scatterplot(
+        SVGBackend::new(&path.join("2-var.svg"), resolution).into_drawing_area(),
+        &x_values,
+        &averages,
+        &medians,
+    )?;
+    scatterplot(
+        BitMapBackend::new(&path.join("2-var.png"), resolution).into_drawing_area(),
+        &x_values,
+        &averages,
+        &medians,
+    )?;
+    histogram(
+        SVGBackend::new(&path.join("x-histogram.svg"), resolution).into_drawing_area(),
+        &game_reader
+            .time_data
+            .iter()
+            .map(|x| x.len())
+            .collect::<Vec<usize>>(),
+    )?;
+
+    Ok(())
+}
+fn gen_path(path: &str) -> std::io::Result<PathBuf> {
+    // plot shit
+
+    let unix_timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap() // if a system clock is fucked up we will have problems.
+        .as_secs();
+
+    let path = PathBuf::from(path).join(unix_timestamp.to_string());
+    create_dir(&path)?;
+    Ok(path)
+}
+fn histogram<T>(
+    root: DrawingArea<T, Shift>,
+    data: &Vec<usize>,
+) -> Result<(), Box<dyn Error + 'static>>
+where
+    T: IntoDrawingArea,
+    <T as DrawingBackend>::ErrorType: 'static,
+{
+    root.fill(&WHITE)?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .x_label_area_size(35)
+        .y_label_area_size(40)
+        .margin(5)
+        .caption("Histogram Test", ("sans-serif", 50.0))
+        .build_cartesian_2d(
+            (0..*data.iter().max().unwrap() as u32 as u32)
+                .step(10)
+                .into_segmented(),
+            0u32..600,
+        )?;
+
+    chart
+        .configure_mesh()
+        .disable_x_mesh()
+        .bold_line_style(WHITE.mix(0.3))
+        .y_desc("Count")
+        .x_desc("Bucket")
+        .axis_desc_style(("sans-serif", 15))
+        .draw()?;
+    chart.draw_series(
+        Histogram::vertical(&chart)
+            .style(RED.mix(0.5).filled())
+            .data(data.iter().map(|x: &usize| {
+                let a = (*x as u32, *data.iter().max().unwrap() as u32 / 1000);
+                a
+            })),
+    )?;
+    root.present()?;
+    Ok(())
+}
+fn scatterplot<T>(
+    root: DrawingArea<T, Shift>,
+    x_values: &Vec<usize>,
+    averages: &Vec<f32>,
+    medians: &Vec<f32>,
+) -> Result<(), Box<dyn Error + 'static>>
+where
+    T: IntoDrawingArea,
+    <T as DrawingBackend>::ErrorType: 'static,
+{
     // for graphing
 
     let max_x = *x_values.iter().max().unwrap() as f32;
@@ -99,15 +148,15 @@ where
     let average_points = x_values
         .iter()
         .zip(averages) // zip is so cool dude WHAT !!
-        .map(|(x, y)| Circle::new((*x as f32, y), 2, GREEN.filled()));
+        .map(|(x, y)| Circle::new((*x as f32, *y), 2, GREEN.filled()));
 
     let median_points = x_values
         .iter()
         .zip(medians) // zip is so cool dude WHAT !!
-        .map(|(x, y)| Circle::new((*x as f32, y), 2, BLUE.filled()));
+        .map(|(x, y)| Circle::new((*x as f32, *y), 2, BLUE.filled()));
 
-    chart.draw_series(average_points).unwrap();
-    chart.draw_series(median_points).unwrap();
+    chart.draw_series(average_points)?;
+    chart.draw_series(median_points)?;
 
     root.present()?;
     Ok(())
