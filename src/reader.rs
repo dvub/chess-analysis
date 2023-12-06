@@ -1,7 +1,6 @@
 use crate::args::Args;
 use pgn_reader::{Skip, Visitor};
 use std::collections::HashMap;
-
 pub struct GameReader {
     pub total_games: usize,
     pub time_map: HashMap<i32, Vec<i32>>,
@@ -39,13 +38,19 @@ impl Visitor for GameReader {
     // first of all, we will read the headers to determine if we should even read this game.
     fn header(&mut self, key: &[u8], value: pgn_reader::RawHeader<'_>) {
         let key = std::str::from_utf8(key).unwrap();
+
+        // save time
+        if !(key == "TimeControl" || key == "WhiteElo" || key == "BlackElo") {
+            return;
+        }
+
         let value = std::str::from_utf8(value.0).unwrap();
         // if it doesn't have +, it's empty, so it's just "-"
         if key == "TimeControl" && value.contains('+') {
             // find the
             let time_control = value.split('+').collect::<Vec<&str>>();
             self.time_control_offset = time_control.get(1).unwrap().parse().unwrap();
-            self.max_allowed_time = time_control.get(0).unwrap().parse().unwrap();
+            self.max_allowed_time = time_control.first().unwrap().parse().unwrap();
             self.time_control = value.to_string();
         }
         if key == "WhiteElo" || key == "BlackElo" {

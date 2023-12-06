@@ -5,6 +5,7 @@ use std::{fs::File, io::BufReader};
 mod args;
 mod plotter;
 mod reader;
+
 use args::Args;
 use reader::GameReader;
 

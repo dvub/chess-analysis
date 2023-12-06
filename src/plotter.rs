@@ -15,8 +15,8 @@ pub fn var_plot(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error
 
     let averages = game_reader
         .time_map
-        .iter()
-        .map(|(_, y_values)| {
+        .values()
+        .map(|y_values| {
             /*y_values
             .iter()
             .map(|y| Circle::new((*x, *y), 2, GREEN.filled()))
