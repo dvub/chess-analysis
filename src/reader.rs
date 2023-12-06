@@ -2,6 +2,7 @@ use crate::args::Args;
 use pgn_reader::{Skip, Visitor};
 use std::collections::HashMap;
 // TODO: FIX UNWRAP HELL!
+// skipping is hugely important for optimization because it could mean skipping millions of games and saving time
 pub struct GameReader {
     /// Total number of games analyzed
     pub total_games: usize,
@@ -11,8 +12,7 @@ pub struct GameReader {
     all_times: Vec<i32>,
     time_control_offset: i32,
     max_allowed_time: i32,
-    time_control: String,
-    average_rating: i32,
+    is_skipping: bool,
 }
 
 impl GameReader {
@@ -38,24 +38,43 @@ impl GameReader {
             // used for determining skips
             all_times: Vec::new(),
             time_control_offset: 0,
-            time_control: "".to_string(),
-            average_rating: 0,
+            is_skipping: false,
         }
     }
 }
 
 impl Visitor for GameReader {
-    type Result = usize;
+    type Result = ();
 
     // honestly probably not necessary, but left it in here from the docs
     fn begin_variation(&mut self) -> Skip {
         Skip(true) // stay in the mainline
     }
 
+    fn begin_game(&mut self) {
+        // reset variables, IMPORTANT!
+        self.all_times.clear();
+        self.is_skipping = false;
+        // decide to skip if we have reached or exceeded the max number of games
+        if self
+            .args
+            .max_games
+            .is_some_and(|max_games| self.total_games >= max_games)
+        {
+            self.is_skipping = true;
+        }
+    }
+
     // first of all, we will read the headers to determine if we should even read this game.
     fn header(&mut self, key: &[u8], value: pgn_reader::RawHeader<'_>) {
+        // if we know we're skipping because of some other condition,
+        // just return here
+        if self.is_skipping {
+            return;
+        };
+
         let key = std::str::from_utf8(key).unwrap();
-        // save time
+        // skip unnecessary headers
         if !(key == "TimeControl" || key == "WhiteElo" || key == "BlackElo") {
             return;
         }
@@ -63,42 +82,44 @@ impl Visitor for GameReader {
         let value = std::str::from_utf8(value.0).unwrap();
         // if it doesn't have +, it's empty, so it's just "-"
         if key == "TimeControl" && value.contains('+') {
+            // decide whether or not to skip based on arguments
+            // skip wrong time control
+            if self
+                .args
+                .time_control
+                .as_ref()
+                .is_some_and(|time_control| value != *time_control)
+            {
+                self.is_skipping = true;
+                // skipping early will save a little time
+                return;
+            }
+
             // find the total game time,
             //and the added time per move, if it exists (after the +)
             let time_control = value.split('+').collect::<Vec<&str>>();
             // offset is the time you get for making a move, if there is one
             self.time_control_offset = time_control.get(1).unwrap().parse().unwrap();
-            self.time_control = value.to_string();
+            //
         } else if key == "WhiteElo" || key == "BlackElo" {
-            self.average_rating += str::parse::<i32>(value).unwrap();
+            // now, NOTE: we ARE assuming that whichever elo comes first is close to the same as the second one.
+            let val = value.parse::<i32>().unwrap();
+            // decide whether or not to skip based on arguments
+            // skip wrong rating
+            if self.args.min_rating.is_some_and(|rating| val < rating)
+                || self.args.max_rating.is_some_and(|rating| val > rating)
+            {
+                self.is_skipping = true;
+            }
         }
     }
+    // SUPER IMPORTANT!
     // now that we've read the game headers
     // we have the necessary info to determine whether to skip reading the game
-    // so we tell it to skip if that's true
     fn end_headers(&mut self) -> Skip {
-        // actually take the average lol
-        let avg = self.average_rating / 2;
-        // reset now that we stored it in the avg variable
-        self.average_rating = 0;
-
-        if self
-            .args
-            .time_control
-            .as_ref()
-            .is_some_and(|time_control| self.time_control != *time_control)
-            || self.args.min_rating.is_some_and(|rating| avg < rating)
-            || self.args.max_rating.is_some_and(|rating| avg > rating)
-            || self
-                .args
-                .max_games
-                .is_some_and(|max_games| self.total_games >= max_games)
-        {
-            return Skip(true);
-        }
-
-        Skip(false)
+        Skip(self.is_skipping)
     }
+
     // in a game, we want to collect all of the times for each move,
     // so we use this function
     fn comment(&mut self, comment: pgn_reader::RawComment<'_>) {
@@ -125,10 +146,9 @@ impl Visitor for GameReader {
     fn end_game(&mut self) -> Self::Result {
         // if the game had no moves or something like that, take care of it here
         if self.all_times.is_empty() {
-            return self.total_games;
+            return;
         }
 
-        // TIL: in order for skip to work and use i - 2, skip has to be at the end.
         for (i, remaining_time) in self.all_times.iter().enumerate().skip(2) {
             if self.max_allowed_time == 0 || *remaining_time <= self.max_allowed_time {
                 let previous_time = self.all_times.get(i - 2).unwrap();
@@ -141,12 +161,9 @@ impl Visitor for GameReader {
                     .push(delta_time);
             }
         }
-        // cleanup, whatever
-        self.all_times.clear();
         self.total_games += 1;
         // uncomment to see how many games were printed lol
-        // println!("{}", self.total_games);
-        self.total_games
+        println!("{}", self.total_games);
     }
 }
 
