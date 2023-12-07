@@ -49,13 +49,10 @@ pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Erro
         &averages,
         &medians,
     )?;
+
     histogram(
         SVGBackend::new(&path.join("x-histogram.svg"), resolution).into_drawing_area(),
-        &game_reader
-            .time_data
-            .iter()
-            .map(|x| x.len())
-            .collect::<Vec<usize>>(),
+        &game_reader.time_data,
     )?;
 
     Ok(())
@@ -74,7 +71,7 @@ fn gen_path(path: &str) -> std::io::Result<PathBuf> {
 }
 fn histogram<T>(
     root: DrawingArea<T, Shift>,
-    data: &Vec<usize>,
+    data: &Vec<Vec<i32>>,
 ) -> Result<(), Box<dyn Error + 'static>>
 where
     T: IntoDrawingArea,
@@ -87,12 +84,7 @@ where
         .y_label_area_size(40)
         .margin(5)
         .caption("Histogram Test", ("sans-serif", 50.0))
-        .build_cartesian_2d(
-            (0..*data.iter().max().unwrap() as u32 as u32)
-                .step(10)
-                .into_segmented(),
-            0u32..600,
-        )?;
+        .build_cartesian_2d((0u32..600).into_segmented(), 0..100)?;
 
     chart
         .configure_mesh()
@@ -105,14 +97,17 @@ where
     chart.draw_series(
         Histogram::vertical(&chart)
             .style(RED.mix(0.5).filled())
-            .data(data.iter().map(|x: &usize| {
-                let a = (*x as u32, *data.iter().max().unwrap() as u32 / 1000);
-                a
+            .data(data.iter().enumerate().map(|(x, v)| {
+                let rounded_bin = (x as u32 + 50) / 100 * 100;
+                (rounded_bin, v.len() as i32)
             })),
     )?;
+    //
     root.present()?;
+    //
     Ok(())
 }
+
 fn scatterplot<T>(
     root: DrawingArea<T, Shift>,
     x_values: &Vec<usize>,
