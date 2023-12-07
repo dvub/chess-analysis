@@ -79,12 +79,16 @@ where
 {
     root.fill(&WHITE)?;
 
+    let lengths = data.iter().map(|v| v.len() / 100).collect::<Vec<usize>>();
+
+    let max_y = lengths.iter().max().unwrap();
+
     let mut chart = ChartBuilder::on(&root)
         .x_label_area_size(35)
         .y_label_area_size(40)
         .margin(5)
         .caption("Histogram Test", ("sans-serif", 50.0))
-        .build_cartesian_2d((0u32..600).into_segmented(), 0..100)?;
+        .build_cartesian_2d((0u32..650).step(50).into_segmented(), 0_32..2000)?;
 
     chart
         .configure_mesh()
@@ -98,8 +102,9 @@ where
         Histogram::vertical(&chart)
             .style(RED.mix(0.5).filled())
             .data(data.iter().enumerate().map(|(x, v)| {
-                let rounded_bin = (x as u32 + 50) / 100 * 100;
-                (rounded_bin, v.len() as i32)
+                let rounded_bin = (x as u32 + 50 / 2) / 50 * 50;
+                let frequency = v.len() as i32 / 1000;
+                (rounded_bin, frequency)
             })),
     )?;
     //
