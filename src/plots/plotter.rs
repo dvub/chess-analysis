@@ -1,4 +1,4 @@
-use super::histogram::x_histogram;
+use super::histogram::{x_histogram, y_histogram};
 use super::scatterplot::scatterplot;
 use crate::reader::GameReader;
 use plotters::prelude::*;
@@ -26,12 +26,18 @@ pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Erro
     x_histogram(
         BitMapBackend::new(&path.join("x-histogram.png"), resolution).into_drawing_area(),
         &game_reader,
+        resolution,
+    )?;
+    y_histogram(
+        BitMapBackend::new(&path.join("y-histogram.png"), resolution).into_drawing_area(),
+        &game_reader,
     )?;
 
     if game_reader.args.svg {
         x_histogram(
             SVGBackend::new(&path.join("x-histogram.svg"), resolution).into_drawing_area(),
             &game_reader,
+            resolution,
         )?;
         scatterplot(
             SVGBackend::new(&path.join("2-var.svg"), resolution).into_drawing_area(),
