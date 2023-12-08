@@ -1,9 +1,10 @@
+// Game reader
+// this is essentially the data collection tool
+
 use crate::args::Args;
 use pgn_reader::{Skip, Visitor};
-// TODO: FIX UNWRAP HELL!
 // skipping is hugely important for optimization because it could mean skipping millions of games and saving time
 pub struct GameReader {
-    /// Total number of games analyzed
     pub total_games: usize,
     pub time_data: Vec<Vec<i32>>,
     pub args: Args,

@@ -3,13 +3,13 @@ use pgn_reader::BufferedReader;
 use std::{fs::File, io::BufReader};
 
 mod args;
-mod plotter;
+mod plots;
 mod reader;
 
 use args::Args;
 use reader::GameReader;
 
-use crate::plotter::gen_plots;
+use plots::plotter::gen_plots;
 
 /* each point could be
 // - (time left, delta time)
