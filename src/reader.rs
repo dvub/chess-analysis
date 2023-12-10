@@ -11,8 +11,7 @@ pub struct GameReader {
     time_control_offset: i32,
     pub max_allowed_time: i32,
     is_skipping: bool,
-    two_ago: i32,
-    prev: i32,
+    prev_times: [i32; 2],
 }
 
 impl GameReader {
@@ -39,8 +38,7 @@ impl GameReader {
             args,
             time_control_offset: 0,
             is_skipping: false,
-            two_ago: 0,
-            prev: 0,
+            prev_times: [0, 0],
         }
     }
 
@@ -107,16 +105,19 @@ impl GameReader {
         let comment_vec: Vec<&str> = cleaned.split(' ').collect();
 
         // basically if we find %clk, we know the next element is a time, so lets convert that and add it to our vec of times
+
         for (i, term) in comment_vec.iter().enumerate() {
             if *term == "%clk" {
+                // assumption made lol
                 let remaining_time = convert_time(comment_vec[i + 1])?;
                 if remaining_time <= self.max_allowed_time {
-                    let delta_time = self.two_ago - (remaining_time - self.time_control_offset);
+                    let delta_time =
+                        self.prev_times[1] - (remaining_time - self.time_control_offset);
                     self.time_data[remaining_time as usize].push(delta_time);
 
                     // update our previous values
-                    self.two_ago = self.prev;
-                    self.prev = remaining_time;
+                    self.prev_times[1] = self.prev_times[0];
+                    self.prev_times[0] = remaining_time;
                 }
             }
         }
@@ -144,6 +145,8 @@ impl Visitor for GameReader {
             self.is_skipping = true;
         } else {
             self.total_games += 1;
+            // uncomment to see how many games were printed lol
+            // println!("{}", self.total_games);
         }
     }
 
@@ -166,10 +169,7 @@ impl Visitor for GameReader {
         self.read_comment(comment)
             .unwrap_or_else(|e| println!("There was an error parsing the game comments:\n{}", e))
     }
-    fn end_game(&mut self) -> Self::Result {
-        // uncomment to see how many games were printed lol
-        // println!("{}", self.total_games);
-    }
+    fn end_game(&mut self) -> Self::Result {}
 }
 
 fn convert_time(time: &str) -> Result<i32, Box<dyn std::error::Error>> {

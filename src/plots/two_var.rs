@@ -91,7 +91,7 @@ where
 {
     let all_points = game_reader.time_data.iter().enumerate().flat_map(|(i, v)| {
         v.iter()
-            .map(move |&y| Circle::new((i as f32, y as f32), 2, BLUE.mix(0.01).filled()))
+            .map(move |&y| Circle::new((i as f32, y as f32), 2, BLUE.mix(0.05).filled()))
     });
     let max_x = game_reader.max_allowed_time as f32;
     let max_y = max_x / 5.0;
