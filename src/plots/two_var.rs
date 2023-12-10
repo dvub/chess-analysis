@@ -190,7 +190,7 @@ where
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
         .caption(
-            generate_caption(GraphType::All, game_reader),
+            generate_caption(GraphType::Quartiles, game_reader),
             ("sans-serif", 35).into_font(),
         )
         .margin(35)

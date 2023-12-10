@@ -16,4 +16,4 @@ _Y/Dependent; Quantitative_: Time taken to make a move, **given an amount of tim
 
 ### 1-var Data
 
-Both will use
+Both graphical

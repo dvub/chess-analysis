@@ -51,7 +51,7 @@ pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Erro
 
 fn two_var(
     game_reader: &GameReader,
-    path: &PathBuf,
+    path: &std::path::Path,
     resolution: (u32, u32),
 ) -> Result<(), Box<dyn std::error::Error>> {
     println!("Printing average TTM graph...");
