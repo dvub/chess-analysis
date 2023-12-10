@@ -8,11 +8,11 @@ pub struct GameReader {
     pub total_games: usize,
     pub time_data: Vec<Vec<i32>>,
     pub args: Args,
-    // private, for data measurement to be passed between pgn-reader functions
-    all_times: Vec<i32>,
     time_control_offset: i32,
     pub max_allowed_time: i32,
     is_skipping: bool,
+    two_ago: i32,
+    prev: i32,
 }
 
 impl GameReader {
@@ -37,10 +37,10 @@ impl GameReader {
             time_data: time_map,
             max_allowed_time,
             args,
-            // used for determining skips
-            all_times: Vec::new(),
             time_control_offset: 0,
             is_skipping: false,
+            two_ago: 0,
+            prev: 0,
         }
     }
 
@@ -109,8 +109,15 @@ impl GameReader {
         // basically if we find %clk, we know the next element is a time, so lets convert that and add it to our vec of times
         for (i, term) in comment_vec.iter().enumerate() {
             if *term == "%clk" {
-                let time = convert_time(comment_vec[i + 1])?;
-                self.all_times.push(time);
+                let remaining_time = convert_time(comment_vec[i + 1])?;
+                if remaining_time <= self.max_allowed_time {
+                    let delta_time = self.two_ago - (remaining_time - self.time_control_offset);
+                    self.time_data[remaining_time as usize].push(delta_time);
+
+                    // update our previous values
+                    self.two_ago = self.prev;
+                    self.prev = remaining_time;
+                }
             }
         }
         Ok(())
@@ -127,7 +134,6 @@ impl Visitor for GameReader {
 
     fn begin_game(&mut self) {
         // reset variables, IMPORTANT!
-        self.all_times.clear();
         self.is_skipping = false;
         // decide to skip if we have reached or exceeded the max number of games
         if self
@@ -136,6 +142,8 @@ impl Visitor for GameReader {
             .is_some_and(|max_games| self.total_games >= max_games)
         {
             self.is_skipping = true;
+        } else {
+            self.total_games += 1;
         }
     }
 
@@ -158,25 +166,7 @@ impl Visitor for GameReader {
         self.read_comment(comment)
             .unwrap_or_else(|e| println!("There was an error parsing the game comments:\n{}", e))
     }
-    // once a game is over, we want to use all the times we collected
     fn end_game(&mut self) -> Self::Result {
-        // if the game had no moves or something like that, take care of it here
-        if self.all_times.is_empty() {
-            return;
-        }
-
-        for (i, remaining_time) in self.all_times.iter().enumerate().skip(2) {
-            // TODO: fix this.
-            if *remaining_time <= self.max_allowed_time {
-                let previous_time = self.all_times[i - 2]; // this can *technically* fail but....
-                let remaining = remaining_time - self.time_control_offset;
-                let delta_time = previous_time - remaining;
-
-                // add it to our big storage place
-                self.time_data[*remaining_time as usize].push(delta_time);
-            }
-        }
-        self.total_games += 1;
         // uncomment to see how many games were printed lol
         // println!("{}", self.total_games);
     }

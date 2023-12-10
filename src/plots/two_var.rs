@@ -197,6 +197,12 @@ where
         .set_label_area_size(LabelAreaPosition::Left, 100)
         .set_label_area_size(LabelAreaPosition::Bottom, 100)
         .build_cartesian_2d(max_x..0f32, 0f32..max_y)?;
+    chart
+        .configure_mesh()
+        .y_desc("TTM (S)")
+        .x_desc("Time Left on Player Clock (S)")
+        .axis_desc_style(("sans-serif", 25))
+        .draw()?;
 
     chart
         .draw_series(first_quartile_line)?
