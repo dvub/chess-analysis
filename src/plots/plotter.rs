@@ -1,5 +1,5 @@
 use super::one_var::{x_histogram, y_histogram};
-use super::two_var::{averages, quartiles};
+use super::two_var::{all_points, averages, quartiles};
 use crate::reader::GameReader;
 use plotters::prelude::*;
 use std::{
@@ -20,12 +20,9 @@ pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Erro
     };
     let path = gen_path(&game_reader.args.output)?;
 
-    averages(
-        BitMapBackend::new(&path.join("2-var").join("ttm_averages.png"), resolution)
-            .into_drawing_area(),
-        &game_reader,
-        resolution,
-    )?;
+    // print all of our 2-variable stuff
+    two_var(&game_reader, &path, resolution)?;
+
     x_histogram(
         BitMapBackend::new(&path.join("x-histogram.png"), resolution).into_drawing_area(),
         &game_reader,
@@ -35,15 +32,6 @@ pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Erro
         BitMapBackend::new(&path.join("y-histogram.png"), resolution).into_drawing_area(),
         &game_reader,
     )?;
-
-    if game_reader.args.quartiles {
-        quartiles(
-            BitMapBackend::new(&path.join("2-var").join("ttm_quartiles.png"), resolution)
-                .into_drawing_area(),
-            &game_reader,
-            resolution,
-        )?;
-    }
 
     if game_reader.args.svg {
         x_histogram(
@@ -60,6 +48,43 @@ pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Erro
 
     Ok(())
 }
+
+fn two_var(
+    game_reader: &GameReader,
+    path: &PathBuf,
+    resolution: (u32, u32),
+) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Printing average TTM graph...");
+    if game_reader.args.averages {
+        averages(
+            BitMapBackend::new(&path.join("2-var").join("ttm_averages.png"), resolution)
+                .into_drawing_area(),
+            game_reader,
+            resolution,
+        )?;
+    }
+    if game_reader.args.quartiles {
+        println!("Printing TTM quartiles graph...");
+        quartiles(
+            BitMapBackend::new(&path.join("2-var").join("ttm_quartiles.png"), resolution)
+                .into_drawing_area(),
+            game_reader,
+            resolution,
+        )?;
+    }
+
+    if game_reader.args.all {
+        println!("Printing all TTMs graph...");
+        all_points(
+            BitMapBackend::new(&path.join("2-var").join("all_ttm.png"), resolution)
+                .into_drawing_area(),
+            game_reader,
+            resolution,
+        )?;
+    }
+    Ok(())
+}
+
 /// Create the necessary directories to output graphs
 fn gen_path(path: &str) -> std::io::Result<PathBuf> {
     // plot shit

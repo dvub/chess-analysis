@@ -46,34 +46,13 @@ where
 
     // ----- chart stuff ----- //
     root.fill(&WHITE)?;
-
-    let caption_text = {
-        let elo_text = {
-            if game_reader.args.min_rating.is_none() && game_reader.args.max_rating.is_none() {
-                "No ELO Limit".to_string()
-            } else {
-                let mut str = String::new();
-                if let Some(rating) = game_reader.args.min_rating {
-                    str.push_str(&rating.to_string());
-                }
-                str.push('-');
-                if let Some(rating) = game_reader.args.max_rating {
-                    str.push_str(&rating.to_string());
-                };
-                str.push_str(" ELO*");
-                str
-            }
-        };
-        format!(
-            "Avg. Time to Move ({}, {} seconds, {} Games)",
-            elo_text, game_reader.args.time_control, game_reader.total_games
-        )
-    };
     // u32
     let area = resolution.0 * resolution.1;
-
     let mut chart = ChartBuilder::on(&root)
-        .caption(caption_text, ("sans-serif", 25).into_font())
+        .caption(
+            generate_caption(GraphType::Average, game_reader),
+            ("sans-serif", 25).into_font(),
+        )
         .margin(35)
         .set_label_area_size(LabelAreaPosition::Left, 100)
         .set_label_area_size(LabelAreaPosition::Bottom, 100)
@@ -81,7 +60,7 @@ where
 
     chart
         .configure_mesh()
-        .y_desc("Average TTM (S)")
+        .y_desc("TTM (S)")
         .x_desc("Time Left on Player Clock (S)")
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
@@ -98,6 +77,47 @@ where
     */
     chart.configure_series_labels().draw()?;
     root.present()?;
+    Ok(())
+}
+
+pub fn all_points<T>(
+    root: DrawingArea<T, Shift>,
+    game_reader: &GameReader,
+    resolution: (u32, u32),
+) -> Result<(), Box<dyn Error + 'static>>
+where
+    T: IntoDrawingArea,
+    <T as DrawingBackend>::ErrorType: 'static,
+{
+    let all_points = game_reader.time_data.iter().enumerate().flat_map(|(i, v)| {
+        v.iter()
+            .map(move |&y| Circle::new((i as f32, y as f32), 2, BLUE.mix(0.01).filled()))
+    });
+    let max_x = game_reader.max_allowed_time as f32;
+    let max_y = max_x / 5.0;
+    // ----- CHART ----- //
+    root.fill(&WHITE)?;
+    let mut chart = ChartBuilder::on(&root)
+        .caption(
+            generate_caption(GraphType::All, game_reader),
+            ("sans-serif", 35).into_font(),
+        )
+        .margin(35)
+        .set_label_area_size(LabelAreaPosition::Left, 100)
+        .set_label_area_size(LabelAreaPosition::Bottom, 100)
+        .build_cartesian_2d(max_x..0f32, 0f32..max_y)?;
+
+    chart
+        .configure_mesh()
+        .y_desc("TTM (S)")
+        .x_desc("Time Left on Player Clock (S)")
+        .axis_desc_style(("sans-serif", 25))
+        .draw()?;
+
+    chart.draw_series(all_points)?;
+    chart.configure_series_labels().draw()?;
+    root.present()?;
+
     Ok(())
 }
 
@@ -168,42 +188,15 @@ where
 
     // ----- CHART ----- //
     root.fill(&WHITE)?;
-    let caption_text = {
-        let elo_text = {
-            if game_reader.args.min_rating.is_none() && game_reader.args.max_rating.is_none() {
-                "No ELO Limit".to_string()
-            } else {
-                let mut str = String::new();
-                if let Some(rating) = game_reader.args.min_rating {
-                    str.push_str(&rating.to_string());
-                }
-                str.push('-');
-                if let Some(rating) = game_reader.args.max_rating {
-                    str.push_str(&rating.to_string());
-                };
-                str.push_str(" ELO*");
-                str
-            }
-        };
-        format!(
-            "TTM Quartiles ({}, {} seconds, {} Games)",
-            elo_text, game_reader.args.time_control, game_reader.total_games
-        )
-    };
-
     let mut chart = ChartBuilder::on(&root)
-        .caption(caption_text, ("sans-serif", 35).into_font())
+        .caption(
+            generate_caption(GraphType::All, game_reader),
+            ("sans-serif", 35).into_font(),
+        )
         .margin(35)
         .set_label_area_size(LabelAreaPosition::Left, 100)
         .set_label_area_size(LabelAreaPosition::Bottom, 100)
         .build_cartesian_2d(max_x..0f32, 0f32..max_y)?;
-
-    chart
-        .configure_mesh()
-        .y_desc("Average Time Taken to Move (S)")
-        .x_desc("Time Left on Player Clock (S)")
-        .axis_desc_style(("sans-serif", 25))
-        .draw()?;
 
     chart
         .draw_series(first_quartile_line)?
@@ -220,5 +213,42 @@ where
         .label("Median TTM")
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
 
+    chart.configure_series_labels().draw()?;
+    root.present()?;
+
     Ok(())
+}
+
+enum GraphType {
+    Average,
+    Quartiles,
+    All,
+}
+
+fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> String {
+    let elo_text = {
+        if game_reader.args.min_rating.is_none() && game_reader.args.max_rating.is_none() {
+            "No ELO Limit".to_string()
+        } else {
+            let mut str = String::new();
+            if let Some(rating) = game_reader.args.min_rating {
+                str.push_str(&rating.to_string());
+            }
+            str.push('-');
+            if let Some(rating) = game_reader.args.max_rating {
+                str.push_str(&rating.to_string());
+            };
+            str.push_str(" ELO*");
+            str
+        }
+    };
+    let title = match graph_type {
+        GraphType::All => "All",
+        GraphType::Average => "Average TTM",
+        GraphType::Quartiles => "TTM Quartiles (1,2,3)",
+    };
+    format!(
+        "{} ({}, {} seconds, {} Games)",
+        title, elo_text, game_reader.args.time_control, game_reader.total_games
+    )
 }

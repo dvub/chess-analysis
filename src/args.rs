@@ -32,9 +32,15 @@ pub struct Args {
     /// Set the resolution of the output images (1:1 ratio). Default is 1000 pixels.
     pub resolution: Option<i32>,
 
-    /// Enable this option to create a scatterplot showing the median, first, and third quartile of the data.
+    /// Enable this option to create a 2-variable graph showing the median, first, and third quartile of TTMs.
     #[arg(long)]
     pub quartiles: bool,
+    /// Enable this option to create a scatterplot showing the time data for all moves in the dataset.
+    #[arg(long)]
+    pub all: bool,
+    /// Enable this option to create a line graph showing average TTMs
+    #[arg(long)]
+    pub averages: bool,
 
     #[arg(long)]
     /// Enable this option to output SVG files in addition to the default PNG output. (the better kind)
