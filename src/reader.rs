@@ -136,6 +136,7 @@ impl Visitor for GameReader {
     fn begin_game(&mut self) {
         // reset variables, IMPORTANT!
         self.is_skipping = false;
+        self.prev_times = [0; 2];
         // decide to skip if we have reached or exceeded the max number of games
         if self
             .args
