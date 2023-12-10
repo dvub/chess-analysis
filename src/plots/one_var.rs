@@ -12,9 +12,8 @@ where
     T: IntoDrawingArea,
     <T as DrawingBackend>::ErrorType: 'static,
 {
-    root.fill(&WHITE)?;
+    // ----- DATA -----
     let bucket_size = 50f32;
-
     let max_x = game_reader.max_allowed_time as f32 + bucket_size;
     let sum = game_reader
         .time_data
@@ -26,7 +25,8 @@ where
         let num = x.len() as f32 / sum as f32;
         (i as f32, num)
     });
-    // chart stuff!!
+    // ----- chart stuff!! -----
+    root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
         .x_label_area_size(35)
         .y_label_area_size(40)
@@ -36,7 +36,6 @@ where
             (0f32..max_x).step(bucket_size).use_round().into_segmented(),
             0f32..1.0,
         )?;
-
     chart
         .configure_mesh()
         .disable_x_mesh()
@@ -64,7 +63,7 @@ where
     T: IntoDrawingArea,
     <T as DrawingBackend>::ErrorType: 'static,
 {
-    root.fill(&WHITE)?;
+    // ----- DATA -----
     let bucket_size = 5f32;
 
     let all_moves = game_reader
@@ -87,7 +86,8 @@ where
             (0f32..max_x).step(bucket_size).use_round().into_segmented(),
             0f32..1.0,
         )?;
-
+    // ----- CHART STUFF ----- //
+    root.fill(&WHITE)?;
     chart
         .configure_mesh()
         .disable_x_mesh()

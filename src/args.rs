@@ -29,10 +29,14 @@ pub struct Args {
     pub max_rating: Option<i32>,
 
     #[arg(long)]
-    /// Enable this option to output SVG files in addition to the default PNG output. (the better kind)
-    pub svg: bool,
-
-    #[arg(long)]
     /// Set the resolution of the output images (1:1 ratio). Default is 1000 pixels.
     pub resolution: Option<i32>,
+
+    /// Enable this option to create a scatterplot showing the median, first, and third quartile of the data.
+    #[arg(long)]
+    pub quartiles: bool,
+
+    #[arg(long)]
+    /// Enable this option to output SVG files in addition to the default PNG output. (the better kind)
+    pub svg: bool,
 }

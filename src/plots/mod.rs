@@ -1,3 +1,3 @@
-pub mod histogram;
+pub mod one_var;
 pub mod plotter;
-pub mod scatterplot;
+pub mod two_var;
