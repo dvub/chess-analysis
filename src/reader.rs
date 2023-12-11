@@ -23,22 +23,24 @@ impl GameReader {
 
         // another note: we're doing a bunch of rather unsafe shit with [] indexing because i will
         // (or hopefully will) add argument validation to the program :)
-        let max_allowed_time = args.time_control.split('+').collect::<Vec<&str>>()[0]
-            .parse::<i32>()
-            .unwrap();
+        let times = args.time_control.split('+').collect::<Vec<&str>>();
+        let max_allowed_time = times[0].parse::<i32>().unwrap();
+        let offset = times[1].parse::<i32>().unwrap();
+
+        let max = max_allowed_time + offset;
         // allows for pretty good optimization huh?
         // neat trick!
-        let time_map: Vec<Vec<i32>> = vec![Vec::new(); max_allowed_time as usize + 1];
+        let time_map: Vec<Vec<i32>> = vec![Vec::new(); max as usize + 1];
 
         GameReader {
             // important stuff
             total_games: 0,
             time_data: time_map,
-            max_allowed_time,
+            max_allowed_time: max,
             args,
-            time_control_offset: 0,
+            time_control_offset: offset,
             is_skipping: false,
-            prev_times: [0, 0],
+            prev_times: [-1, -1],
         }
     }
 
@@ -60,23 +62,7 @@ impl GameReader {
         }
 
         let value = std::str::from_utf8(value.0)?;
-        // if it doesn't have +, it's empty, so it's just "-"
-        if key == "TimeControl" && value.contains('+') {
-            // decide whether or not to skip based on arguments
-            // skip wrong time control
-            if value != self.args.time_control {
-                self.is_skipping = true;
-                // skipping early will save a little time
-                return Ok(());
-            }
-
-            // find the total game time,
-            //and the added time per move, if it exists (after the +)
-            let time_control = value.split('+').collect::<Vec<&str>>();
-            // offset is the time you get for making a move, if there is one
-            self.time_control_offset = time_control[1].parse()?;
-            //
-        } else if key == "WhiteElo" || key == "BlackElo" {
+        if key == "WhiteElo" || key == "BlackElo" {
             // now, NOTE: we ARE assuming that whichever elo comes first is close to the same as the second one.
             let val = value.parse::<i32>()?;
             // decide whether or not to skip based on arguments
@@ -108,16 +94,24 @@ impl GameReader {
 
         for (i, term) in comment_vec.iter().enumerate() {
             if *term == "%clk" {
-                // assumption made lol
                 let remaining_time = convert_time(comment_vec[i + 1])?;
                 if remaining_time <= self.max_allowed_time {
-                    let delta_time =
-                        self.prev_times[1] - (remaining_time - self.time_control_offset);
-                    self.time_data[remaining_time as usize].push(delta_time);
+                    // before any times are added
+                    if self.prev_times.eq(&[-1; 2]) {
+                        self.prev_times[1] = remaining_time;
+                        println!("asd");
+                    } else if self.prev_times[0] == -1 && self.prev_times[1] != -1 {
+                        println!("asdasd");
+                        self.prev_times[0] = remaining_time;
+                    } else {
+                        let delta_time =
+                            self.prev_times[1] - (remaining_time - self.time_control_offset);
+                        self.time_data[remaining_time as usize].push(delta_time);
 
-                    // update our previous values
-                    self.prev_times[1] = self.prev_times[0];
-                    self.prev_times[0] = remaining_time;
+                        // update our previous values
+                        self.prev_times[1] = self.prev_times[0];
+                        self.prev_times[0] = remaining_time;
+                    }
                 }
             }
         }

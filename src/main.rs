@@ -57,6 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!();
     println!("Now creating plot of data... This shouldn't take long. ");
+    println!("{:?}", game_reader.time_data);
 
     gen_plots(game_reader)
         .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));
