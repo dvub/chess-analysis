@@ -94,7 +94,6 @@ where
             .map(move |&y| Circle::new((i as f32, y as f32), 2, BLUE.mix(0.05).filled()))
     });
     let max_x = game_reader.max_allowed_time as f32;
-    let max_y = max_x / 5.0;
     // ----- CHART ----- //
     root.fill(&WHITE)?;
     let mut chart = ChartBuilder::on(&root)
@@ -105,7 +104,7 @@ where
         .margin(35)
         .set_label_area_size(LabelAreaPosition::Left, 100)
         .set_label_area_size(LabelAreaPosition::Bottom, 100)
-        .build_cartesian_2d(max_x..0f32, 0f32..max_y)?;
+        .build_cartesian_2d(max_x..0f32, 0f32..max_x)?;
 
     chart
         .configure_mesh()

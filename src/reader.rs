@@ -68,7 +68,11 @@ impl GameReader {
             // println!("{}, {}", self.args.time_control, value);
             self.is_skipping = true;
             return Ok(());
-        } else if key == "WhiteElo" || key == "BlackElo" {
+        // extra check to see if max/min rating is even specified
+        // if not then we don't even have to waste time doing this
+        } else if (self.args.max_rating.is_some() || self.args.min_rating.is_some())
+            && (key == "WhiteElo" || key == "BlackElo")
+        {
             // now, NOTE: we ARE assuming that whichever elo comes first is close to the same as the second one.
             let val = value.parse::<i32>()?;
             // decide whether or not to skip based on arguments
@@ -103,11 +107,14 @@ impl GameReader {
                 let remaining_time = convert_time(comment_vec[i + 1])?;
                 //println!("{}", remaining_time);
                 if remaining_time <= self.max_allowed_time {
+                    // initialize first moves
+                    // very important!!
                     if self.prev_times[1] == -1 {
                         self.prev_times[1] = remaining_time;
                     } else if self.prev_times[0] == -1 {
                         self.prev_times[0] = remaining_time;
                     } else {
+                        // if we have initialized our first 2 moves, then we can actually start measuring things
                         let delta_time =
                             self.prev_times[1] - (remaining_time - self.time_control_offset);
                         self.time_data[remaining_time as usize].push(delta_time);
