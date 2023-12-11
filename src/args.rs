@@ -22,27 +22,27 @@ pub struct Args {
     pub max_games: Option<usize>,
 
     /// The minimum average rating between both players in games to collect from
-    #[arg(long)]
+    #[arg(short = 'm', long)]
     pub min_rating: Option<i32>,
-    #[arg(long)]
+    #[arg(short = 'M', long)]
     /// The maxmimum average rating between both players in games to collect from
     pub max_rating: Option<i32>,
 
-    #[arg(long)]
+    #[arg(short, long)]
     /// Set the resolution of the output images (1:1 ratio). Default is 1000 pixels.
     pub resolution: Option<i32>,
 
     /// Enable this option to create a 2-variable graph showing the median, first, and third quartile of TTMs.
-    #[arg(long)]
+    #[arg(short, long)]
     pub quartiles: bool,
     /// Enable this option to create a scatterplot showing the time data for all moves in the dataset.
-    #[arg(long)]
+    #[arg(short = 'A', long)]
     pub all: bool,
     /// Enable this option to create a line graph showing average TTMs
-    #[arg(long)]
+    #[arg(short = 'a', long)]
     pub averages: bool,
 
-    #[arg(long)]
+    #[arg(short, long)]
     /// Enable this option to output SVG files in addition to the default PNG output. (the better kind)
     pub svg: bool,
 }

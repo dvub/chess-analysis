@@ -5,6 +5,7 @@ use crate::args::Args;
 use pgn_reader::{Skip, Visitor};
 // skipping is hugely important for optimization because it could mean skipping millions of games and saving time
 pub struct GameReader {
+    pub games_analyzed: usize,
     pub total_games: usize,
     pub time_data: Vec<Vec<i32>>,
     pub args: Args,
@@ -34,13 +35,14 @@ impl GameReader {
 
         GameReader {
             // important stuff
-            total_games: 0,
+            games_analyzed: 0,
             time_data: time_map,
             max_allowed_time: max,
             args,
             time_control_offset: offset,
             is_skipping: false,
             prev_times: [-1, -1],
+            total_games: 0,
         }
     }
 
@@ -62,7 +64,11 @@ impl GameReader {
         }
 
         let value = std::str::from_utf8(value.0)?;
-        if key == "WhiteElo" || key == "BlackElo" {
+        if key == "TimeControl" && value != self.args.time_control {
+            // println!("{}, {}", self.args.time_control, value);
+            self.is_skipping = true;
+            return Ok(());
+        } else if key == "WhiteElo" || key == "BlackElo" {
             // now, NOTE: we ARE assuming that whichever elo comes first is close to the same as the second one.
             let val = value.parse::<i32>()?;
             // decide whether or not to skip based on arguments
@@ -95,13 +101,11 @@ impl GameReader {
         for (i, term) in comment_vec.iter().enumerate() {
             if *term == "%clk" {
                 let remaining_time = convert_time(comment_vec[i + 1])?;
+                //println!("{}", remaining_time);
                 if remaining_time <= self.max_allowed_time {
-                    // before any times are added
-                    if self.prev_times.eq(&[-1; 2]) {
+                    if self.prev_times[1] == -1 {
                         self.prev_times[1] = remaining_time;
-                        println!("asd");
-                    } else if self.prev_times[0] == -1 && self.prev_times[1] != -1 {
-                        println!("asdasd");
+                    } else if self.prev_times[0] == -1 {
                         self.prev_times[0] = remaining_time;
                     } else {
                         let delta_time =
@@ -130,18 +134,14 @@ impl Visitor for GameReader {
     fn begin_game(&mut self) {
         // reset variables, IMPORTANT!
         self.is_skipping = false;
-        self.prev_times = [0; 2];
+        self.prev_times = [-1; 2];
         // decide to skip if we have reached or exceeded the max number of games
         if self
             .args
             .max_games
-            .is_some_and(|max_games| self.total_games >= max_games)
+            .is_some_and(|max_games| self.games_analyzed >= max_games)
         {
             self.is_skipping = true;
-        } else {
-            self.total_games += 1;
-            // uncomment to see how many games were printed lol
-            // println!("{}", self.total_games);
         }
     }
 
@@ -155,6 +155,10 @@ impl Visitor for GameReader {
     // now that we've read the game headers
     // we have the necessary info to determine whether to skip reading the game
     fn end_headers(&mut self) -> Skip {
+        if !self.is_skipping {
+            self.games_analyzed += 1;
+        }
+        self.total_games += 1;
         Skip(self.is_skipping)
     }
 

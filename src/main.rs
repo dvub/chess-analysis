@@ -51,13 +51,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // print some helpful information for the user
     println!("Successfully finished reading games!");
     println!(
-        "A total of {} games were analyzed.",
-        game_reader.total_games
+        "A total of {} games were analyzed out of {}.",
+        game_reader.games_analyzed, game_reader.total_games
     );
 
     println!();
     println!("Now creating plot of data... This shouldn't take long. ");
-    println!("{:?}", game_reader.time_data);
+    // println!("{:?}", game_reader.time_data);
 
     gen_plots(game_reader)
         .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));

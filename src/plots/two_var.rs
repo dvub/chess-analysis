@@ -255,6 +255,6 @@ fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> String {
     };
     format!(
         "{} ({}, {} seconds, {} Games)",
-        title, elo_text, game_reader.args.time_control, game_reader.total_games
+        title, elo_text, game_reader.args.time_control, game_reader.games_analyzed
     )
 }
