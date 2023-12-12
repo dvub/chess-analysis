@@ -47,14 +47,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     reader
         .read_all(&mut game_reader)
         .unwrap_or_else(|e| println!("An error occurred reading games:\n{}", e));
-
+    
     // print some helpful information for the user
     println!("Successfully finished reading games!");
     println!(
         "A total of {} games were analyzed out of {}.",
         game_reader.games_analyzed, game_reader.total_games
     );
-
+    
     println!();
     println!("Now creating plot of data... This shouldn't take long. ");
     // println!("{:?}", game_reader.time_data);
@@ -62,6 +62,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_plots(game_reader)
         .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));
 
+    let x_values = game_reader.time_data.iter().enumerate().map(|(i, v)| {
+        v.iter().map(|_| i)
+    }).collect::<Vec<i32>>();
     println!("Successfully generated a plot.");
     Ok(())
 }

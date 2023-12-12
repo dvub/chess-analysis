@@ -2,7 +2,7 @@ use crate::reader::GameReader;
 use plotters::drawing::DrawingArea;
 use plotters::{coord::Shift, prelude::*};
 use std::error::Error;
-
+use super::plotter::{generate_caption, GraphType};
 // TODO:
 // - 3 seperate functions for all points, average, and quartile displays
 // - make graphs look good
@@ -224,36 +224,3 @@ where
     Ok(())
 }
 
-enum GraphType {
-    Average,
-    Quartiles,
-    All,
-}
-
-fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> String {
-    let elo_text = {
-        if game_reader.args.min_rating.is_none() && game_reader.args.max_rating.is_none() {
-            "No ELO Limit".to_string()
-        } else {
-            let mut str = String::new();
-            if let Some(rating) = game_reader.args.min_rating {
-                str.push_str(&rating.to_string());
-            }
-            str.push('-');
-            if let Some(rating) = game_reader.args.max_rating {
-                str.push_str(&rating.to_string());
-            };
-            str.push_str(" ELO*");
-            str
-        }
-    };
-    let title = match graph_type {
-        GraphType::All => "All",
-        GraphType::Average => "Average TTM",
-        GraphType::Quartiles => "TTM Quartiles (1,2,3)",
-    };
-    format!(
-        "{} ({}, {} seconds, {} Games)",
-        title, elo_text, game_reader.args.time_control, game_reader.games_analyzed
-    )
-}

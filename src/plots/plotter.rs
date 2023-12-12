@@ -100,3 +100,42 @@ fn gen_path(path: &str) -> std::io::Result<PathBuf> {
 
     Ok(path)
 }
+
+pub enum GraphType {
+    Average,
+    Quartiles,
+    All,
+    RelativeFrequencyX,
+    RelativeFrequencyY,
+}
+
+
+pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> String {
+    let elo_text = {
+        if game_reader.args.min_rating.is_none() && game_reader.args.max_rating.is_none() {
+            "No ELO Limit".to_string()
+        } else {
+            let mut str = String::new();
+            if let Some(rating) = game_reader.args.min_rating {
+                str.push_str(&rating.to_string());
+            }
+            str.push('-');
+            if let Some(rating) = game_reader.args.max_rating {
+                str.push_str(&rating.to_string());
+            };
+            str.push_str(" ELO*");
+            str
+        }
+    };
+    let title = match graph_type {
+        GraphType::All => "All",
+        GraphType::Average => "Average TTM",
+        GraphType::Quartiles => "TTM Quartiles (1,2,3)",
+        GraphType::RelativeFrequencyX => "RF of Time Left",
+        GraphType::RelativeFrequencyY => "RF of TTM"
+    };
+    format!(
+        "{} ({}, {} seconds, {} Games)",
+        title, elo_text, game_reader.args.time_control, game_reader.games_analyzed
+    )
+}

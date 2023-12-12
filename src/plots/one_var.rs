@@ -1,7 +1,11 @@
 use crate::reader::GameReader;
+use crate::plots::plotter::GraphType;
 use plotters::drawing::DrawingArea;
 use plotters::{coord::Shift, prelude::*};
+
 use std::error::Error;
+
+use super::plotter::generate_caption;
 
 pub fn x_histogram<T>(
     root: DrawingArea<T, Shift>,
@@ -13,8 +17,9 @@ where
     <T as DrawingBackend>::ErrorType: 'static,
 {
     // ----- DATA -----
-    let bucket_size = 50f32;
-    let max_x = game_reader.max_allowed_time as f32 + bucket_size;
+    let num_buckets = 8;
+    let bucket_size = game_reader.max_allowed_time as f32 / num_buckets as f32;
+    let max_x = game_reader.max_allowed_time as f32 + bucket_size as f32;
     let sum = game_reader
         .time_data
         .iter()
@@ -31,17 +36,17 @@ where
         .x_label_area_size(35)
         .y_label_area_size(40)
         .margin(30)
-        .caption("Freq. of time left", ("sans-serif", 50.0))
+        .caption(generate_caption(GraphType::RelativeFrequencyX, game_reader), ("sans-serif", 20.0))
         .build_cartesian_2d(
-            (0f32..max_x).step(bucket_size).use_round().into_segmented(),
+            (0f32..max_x).step(bucket_size).use_round(),
             0f32..1.0,
         )?;
     chart
         .configure_mesh()
         .disable_x_mesh()
         .bold_line_style(WHITE.mix(0.3))
-        .y_desc("Number of Moves Made")
-        .x_desc("Time Left")
+        .y_desc("Relative Frequency of Moves Made (percent)")
+        .x_desc("Time left (S)")
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
     chart.draw_series(
@@ -64,7 +69,7 @@ where
     <T as DrawingBackend>::ErrorType: 'static,
 {
     // ----- DATA -----
-    let bucket_size = 5f32;
+    
 
     let all_moves = game_reader
         .time_data
@@ -73,17 +78,20 @@ where
         .collect::<Vec<&i32>>();
 
     let total = all_moves.len();
-    let max_x = **all_moves.iter().max().unwrap() as f32;
+    let num_buckets = 100;
+    let bucket_size = game_reader.max_allowed_time as f32 / num_buckets as f32;
+    let max_x = 100.0;
 
     let data = all_moves.iter().map(|v| (**v as f32, 1f32 / total as f32));
+
 
     let mut chart = ChartBuilder::on(&root)
         .x_label_area_size(35)
         .y_label_area_size(40)
         .margin(30)
-        .caption("Freq. of time left", ("sans-serif", 50.0))
+        .caption(generate_caption(GraphType::RelativeFrequencyY, game_reader), ("sans-serif", 20.0))
         .build_cartesian_2d(
-            (0f32..max_x).step(bucket_size).use_round().into_segmented(),
+            (0f32..max_x).step(bucket_size).use_round(),
             0f32..1.0,
         )?;
     // ----- CHART STUFF ----- //
@@ -92,8 +100,8 @@ where
         .configure_mesh()
         .disable_x_mesh()
         .bold_line_style(WHITE.mix(0.3))
-        .y_desc("Number of Moves Made")
-        .x_desc("Time Left")
+        .y_desc("Relative Frequency of Moves Made (percent)")
+        .x_desc("Time Taken to Move (S)")
         .axis_desc_style(("sans-serif", 15))
         .draw()?;
     chart.draw_series(
