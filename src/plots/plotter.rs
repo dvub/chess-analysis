@@ -10,7 +10,7 @@ use std::{
 
 // TODO: add helpful error messages
 
-pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Error>> {
+pub fn gen_plots(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> {
     let resolution = {
         if let Some(r) = game_reader.args.resolution {
             (r as u32, r as u32)
@@ -21,16 +21,16 @@ pub fn gen_plots(game_reader: GameReader) -> Result<(), Box<dyn std::error::Erro
     let path = gen_path(&game_reader.args.output)?;
 
     // print all of our 2-variable stuff
-    two_var(&game_reader, &path, resolution)?;
+    two_var(game_reader, &path, resolution)?;
 
     x_histogram(
         BitMapBackend::new(&path.join("x-histogram.png"), resolution).into_drawing_area(),
-        &game_reader,
+        game_reader,
         resolution,
     )?;
     y_histogram(
         BitMapBackend::new(&path.join("y-histogram.png"), resolution).into_drawing_area(),
-        &game_reader,
+        game_reader,
     )?;
 
     if game_reader.args.svg {
@@ -109,7 +109,6 @@ pub enum GraphType {
     RelativeFrequencyY,
 }
 
-
 pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> String {
     let elo_text = {
         if game_reader.args.min_rating.is_none() && game_reader.args.max_rating.is_none() {
@@ -132,7 +131,7 @@ pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> Stri
         GraphType::Average => "Average TTM",
         GraphType::Quartiles => "TTM Quartiles (1,2,3)",
         GraphType::RelativeFrequencyX => "RF of Time Left",
-        GraphType::RelativeFrequencyY => "RF of TTM"
+        GraphType::RelativeFrequencyY => "RF of TTM",
     };
     format!(
         "{} ({}, {} seconds, {} Games)",
