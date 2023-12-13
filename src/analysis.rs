@@ -1,5 +1,8 @@
 use nalgebra::{DMatrix, DVector, SVD};
 
+// complete honesty here, i did not write this code
+// as of the time of me writing this, i don't know a lot about matrix algebra.
+// so i wasn't able to write my own implementation by hand to solve AX = B for quadratic regression.
 pub fn quadratic_regression(
     x_values: &Vec<f64>,
     y_values: &Vec<f64>,
@@ -21,6 +24,10 @@ mod tests {
         let multiplier = 10u32.pow(decimal_digits);
         (value * multiplier as f64).round() / multiplier as f64
     }
+
+    // example data was sourced from here
+    // https://goodcalculators.com/quadratic-regression-calculator/
+
     #[test]
     fn quadratic_regression() {
         let x_values = vec![
