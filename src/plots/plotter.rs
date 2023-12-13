@@ -94,11 +94,16 @@ fn gen_path(path: &str) -> std::io::Result<PathBuf> {
         .unwrap() // if a system clock is fucked up we will have problems.
         .as_secs();
 
-    let path = PathBuf::from(path).join(unix_timestamp.to_string());
-    create_dir(&path)?;
-    create_dir(path.join("2-var"))?;
+    let path = PathBuf::from(path);
+    if !path.exists() {
+        println!("Path doesn't exist, trying to create...");
+        create_dir(&path)?;
+    }
+    let new_path = path.join(unix_timestamp.to_string());
+    create_dir(&new_path)?;
+    create_dir(new_path.join("2-var"))?;
 
-    Ok(path)
+    Ok(new_path)
 }
 
 pub enum GraphType {
@@ -137,4 +142,16 @@ pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> Stri
         "{} ({}, {} seconds, {} Games)",
         title, elo_text, game_reader.args.time_control, game_reader.games_analyzed
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs::read_dir;
+
+    #[test]
+    fn test_path() {
+        super::gen_path("./test").unwrap();
+        let parent = read_dir("./test");
+        assert!(parent.is_ok());
+    }
 }
