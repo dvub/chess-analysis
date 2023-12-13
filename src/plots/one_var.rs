@@ -1,5 +1,5 @@
-use crate::reader::GameReader;
 use crate::plots::plotter::GraphType;
+use crate::reader::GameReader;
 use plotters::drawing::DrawingArea;
 use plotters::{coord::Shift, prelude::*};
 
@@ -19,7 +19,7 @@ where
     // ----- DATA -----
     let num_buckets = 8;
     let bucket_size = game_reader.max_allowed_time as f32 / num_buckets as f32;
-    let max_x = game_reader.max_allowed_time as f32 + bucket_size as f32;
+    let max_x = game_reader.max_allowed_time as f32 + bucket_size;
     let sum = game_reader
         .time_data
         .iter()
@@ -36,11 +36,11 @@ where
         .x_label_area_size(35)
         .y_label_area_size(40)
         .margin(30)
-        .caption(generate_caption(GraphType::RelativeFrequencyX, game_reader), ("sans-serif", 20.0))
-        .build_cartesian_2d(
-            (0f32..max_x).step(bucket_size).use_round(),
-            0f32..1.0,
-        )?;
+        .caption(
+            generate_caption(GraphType::RelativeFrequencyX, game_reader),
+            ("sans-serif", 20.0),
+        )
+        .build_cartesian_2d((0f32..max_x).step(bucket_size).use_round(), 0f32..1.0)?;
     chart
         .configure_mesh()
         .disable_x_mesh()
@@ -69,7 +69,6 @@ where
     <T as DrawingBackend>::ErrorType: 'static,
 {
     // ----- DATA -----
-    
 
     let all_moves = game_reader
         .time_data
@@ -84,16 +83,15 @@ where
 
     let data = all_moves.iter().map(|v| (**v as f32, 1f32 / total as f32));
 
-
     let mut chart = ChartBuilder::on(&root)
         .x_label_area_size(35)
         .y_label_area_size(40)
         .margin(30)
-        .caption(generate_caption(GraphType::RelativeFrequencyY, game_reader), ("sans-serif", 20.0))
-        .build_cartesian_2d(
-            (0f32..max_x).step(bucket_size).use_round(),
-            0f32..1.0,
-        )?;
+        .caption(
+            generate_caption(GraphType::RelativeFrequencyY, game_reader),
+            ("sans-serif", 20.0),
+        )
+        .build_cartesian_2d((0f32..max_x).step(bucket_size).use_round(), 0f32..1.0)?;
     // ----- CHART STUFF ----- //
     root.fill(&WHITE)?;
     chart

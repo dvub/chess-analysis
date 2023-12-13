@@ -1,8 +1,9 @@
+use super::plotter::{generate_caption, GraphType};
+use crate::analysis::quadratic_regression;
 use crate::reader::GameReader;
 use plotters::drawing::DrawingArea;
 use plotters::{coord::Shift, prelude::*};
 use std::error::Error;
-use super::plotter::{generate_caption, GraphType};
 // TODO:
 // - 3 seperate functions for all points, average, and quartile displays
 // - make graphs look good
@@ -69,6 +70,25 @@ where
         .draw_series(average_line)?
         .label("Average time taken")
         .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 50, y)], color));
+    let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
+        .unzip();
+    println!("{:?}", quadratic_regression(&x_values, &y_values).unwrap());
+
+    let r = quadratic_regression(&x_values, &y_values)?;
+
+    chart.draw_series(LineSeries::new(
+        (0..600).map(|x| {
+            (
+                x as f32,
+                r.0 as f32 * x as f32 * x as f32 + r.1 as f32 * x as f32 + r.2 as f32,
+            )
+        }),
+        &RED,
+    ))?;
     /*
     chart.draw_series(game_reader.time_data.iter().enumerate().flat_map(|(i, v)| {
         v.iter()
@@ -223,4 +243,3 @@ where
 
     Ok(())
 }
-
