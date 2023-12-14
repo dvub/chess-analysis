@@ -48,7 +48,7 @@ where
     // ----- chart stuff ----- //
     root.fill(&WHITE)?;
     // u32
-    let area = resolution.0 * resolution.1;
+    let _area = resolution.0 * resolution.1;
     let mut chart = ChartBuilder::on(&root)
         .caption(
             generate_caption(GraphType::Average, game_reader),
@@ -107,8 +107,6 @@ where
     T: IntoDrawingArea,
     <T as DrawingBackend>::ErrorType: 'static,
 {
-    let color = RED;
-
     // ----- DATA ----- //
     let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
         .time_data
@@ -131,7 +129,7 @@ where
     // ----- chart stuff ----- //
     root.fill(&WHITE)?;
     // u32
-    let area = resolution.0 * resolution.1;
+    let _area = resolution.0 * resolution.1;
     let mut chart = ChartBuilder::on(&root)
         .caption(
             generate_caption(GraphType::Average, game_reader),
@@ -166,7 +164,7 @@ where
 pub fn all_points<T>(
     root: DrawingArea<T, Shift>,
     game_reader: &GameReader,
-    resolution: (u32, u32),
+    _resolution: (u32, u32),
 ) -> Result<(), Box<dyn Error + 'static>>
 where
     T: IntoDrawingArea,
@@ -197,110 +195,6 @@ where
         .draw()?;
 
     chart.draw_series(all_points)?;
-    chart.configure_series_labels().draw()?;
-    root.present()?;
-
-    Ok(())
-}
-
-pub fn quartiles<T>(
-    root: DrawingArea<T, Shift>,
-    game_reader: &GameReader,
-    resolution: (u32, u32),
-) -> Result<(), Box<dyn Error + 'static>>
-where
-    T: IntoDrawingArea,
-    <T as DrawingBackend>::ErrorType: 'static,
-{
-    // data shit
-    let medians = game_reader
-        .time_data
-        .iter()
-        .map(|y_values| {
-            let mut sorted_values = y_values.to_vec(); // Create a mutable copy
-            sorted_values.sort();
-            sorted_values[sorted_values.len() / 2] as f32
-        })
-        .collect::<Vec<f32>>();
-
-    let first_quartile = game_reader
-        .time_data
-        .iter()
-        .map(|y_values| {
-            let mut sorted_values = y_values.to_vec(); // Create a mutable copy
-            sorted_values.sort();
-            let idx = sorted_values.len() as f32 * 0.25;
-
-            sorted_values[idx as usize] as f32
-        })
-        .collect::<Vec<f32>>();
-    let third_quartile = game_reader
-        .time_data
-        .iter()
-        .map(|y_values| {
-            let mut sorted_values = y_values.to_vec(); // Create a mutable copy
-            sorted_values.sort();
-            let idx = sorted_values.len() as f32 * 0.75;
-
-            sorted_values[idx as usize] as f32
-        })
-        .collect::<Vec<f32>>();
-    let first_quartile_line = LineSeries::new(
-        first_quartile
-            .iter()
-            .enumerate()
-            .map(|(x, y)| (x as f32, *y)),
-        BLUE.mix(0.5).stroke_width(2),
-    );
-    let third_quartile_line = LineSeries::new(
-        third_quartile
-            .iter()
-            .enumerate()
-            .map(|(x, y)| (x as f32, *y)),
-        BLUE.mix(0.5).stroke_width(2),
-    );
-
-    let median_line = LineSeries::new(
-        medians.iter().enumerate().map(|(x, y)| (x as f32, *y)),
-        BLUE.mix(0.75).stroke_width(3),
-    );
-
-    let max_x = game_reader.max_allowed_time as f32;
-    let max_y = medians.into_iter().reduce(f32::max).unwrap() + 2.0;
-
-    // ----- CHART ----- //
-    root.fill(&WHITE)?;
-    let mut chart = ChartBuilder::on(&root)
-        .caption(
-            generate_caption(GraphType::Quartiles, game_reader),
-            ("sans-serif", 35).into_font(),
-        )
-        .margin(35)
-        .set_label_area_size(LabelAreaPosition::Left, 100)
-        .set_label_area_size(LabelAreaPosition::Bottom, 100)
-        .build_cartesian_2d(max_x..0f32, 0f32..max_y)?;
-    chart
-        .configure_mesh()
-        .y_desc("TTM (S)")
-        .x_desc("Time Left on Player Clock (S)")
-        .axis_desc_style(("sans-serif", 25))
-        .draw()?;
-
-    chart
-        .draw_series(first_quartile_line)?
-        .label("First Quartile TTM ")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
-
-    chart
-        .draw_series(third_quartile_line)?
-        .label("Third Quartile TTM ")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
-
-    chart
-        .draw_series(median_line)?
-        .label("Median TTM")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
-
     chart.configure_series_labels().draw()?;
     root.present()?;
 

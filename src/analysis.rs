@@ -1,7 +1,4 @@
 use nalgebra::{DMatrix, DVector, SVD};
-
-use crate::plots::two_var::residuals;
-
 // complete honesty here, i did not write this code
 // as of the time of me writing this, i don't know a lot about matrix algebra.
 // so i wasn't able to write my own implementation by hand to solve AX = B for quadratic regression.

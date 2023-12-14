@@ -17,7 +17,7 @@ pub struct GameReader {
 }
 
 impl GameReader {
-    pub fn new(args: Args) -> GameReader {
+    pub fn new(args: &Args) -> GameReader {
         // max allowed time will be used to filter garbage data
         // because there is some, either by my collection methods or in the database
         // this is a huge optimization of my original implementation
@@ -39,7 +39,7 @@ impl GameReader {
             games_analyzed: 0,
             time_data: time_map,
             max_allowed_time: max,
-            args,
+            args: args.clone(),
             time_control_offset: offset,
             is_skipping: false,
             prev_times: [-1, -1],

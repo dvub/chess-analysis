@@ -34,6 +34,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // TODO: arg validation
     let args = Args::parse();
     // open the file parsed from clap
+    let mut game_reader = GameReader::new(&args);
+    data_collection(&args, &mut game_reader);
+
+    println!();
+    println!("Now creating plot of data... This shouldn't take long. ");
+
+    let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
+        .unzip();
+    gen_plots(&game_reader)
+        .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));
+
+    println!("Successfully generated plots.");
+
+    analysis(&x_values, &y_values)?;
+    Ok(())
+}
+fn data_collection(args: &Args, game_reader: &mut GameReader) {
+    println!("Collecting Data");
     let games = File::open(&args.input).expect("Error reading PGN file. :( Exiting...");
     // open a bufreader
     let buf = BufReader::new(games);
@@ -42,11 +64,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // now, we will actually read the file and the games
     let mut reader = BufferedReader::new(buf);
-    let mut game_reader = GameReader::new(args);
     println!("Reading all games. This will take a moment... Or a few, if you have a lot of games.");
     println!();
     reader
-        .read_all(&mut game_reader)
+        .read_all(game_reader)
         .unwrap_or_else(|e| println!("An error occurred reading games:\n{}", e));
 
     // print some helpful information for the user
@@ -59,26 +80,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "A total of {} moves were analyzed.",
         game_reader.moves_analyzed
     );
+}
 
+fn analysis(x_values: &Vec<f64>, y_values: &Vec<f64>) -> Result<(), Box<dyn std::error::Error>> {
+    // print cool little title
     println!();
-    println!("Now creating plot of data... This shouldn't take long. ");
-    // println!("{:?}", game_reader.time_data);
-
-    gen_plots(&game_reader)
-        .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));
-
-    println!("Successfully generated plots.");
-    let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
-        .time_data
-        .iter()
-        .enumerate()
-        .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
-        .unzip();
-    let det = determination(&x_values, &y_values)?;
-    println!();
-
     println!("Regression Analysis");
-    let line = quadratic_regression(&x_values, &y_values)?;
+    println!();
+
+    let line = quadratic_regression(x_values, y_values)?;
+    let det = determination(x_values, y_values)?;
+
     println!(
         "Quadratic Regression: {}x^2 {}x {}",
         to_precision(line.0, 4),
@@ -91,6 +103,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         (det * 100.0).round()
     );
     println!("Thus, the Correlation r = {}.", to_precision(det.sqrt(), 4));
-
     Ok(())
 }

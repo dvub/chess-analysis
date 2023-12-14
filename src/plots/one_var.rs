@@ -10,7 +10,7 @@ use super::plotter::generate_caption;
 pub fn x_histogram<T>(
     root: DrawingArea<T, Shift>,
     game_reader: &GameReader,
-    resolution: (u32, u32),
+    _resolution: (u32, u32),
 ) -> Result<(), Box<dyn Error + 'static>>
 where
     T: IntoDrawingArea,

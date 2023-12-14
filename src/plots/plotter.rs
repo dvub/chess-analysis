@@ -22,12 +22,16 @@ pub fn gen_plots(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Err
 
     // print all of our 2-variable stuff
     two_var(game_reader, &path, resolution)?;
-    residuals(
-        BitMapBackend::new(&path.join("residuals.png"), resolution).into_drawing_area(),
-        game_reader,
-        resolution,
-    )?;
-
+    if game_reader.args.one_var {
+        one_var(game_reader, &path, resolution)?;
+    }
+    Ok(())
+}
+fn one_var(
+    game_reader: &GameReader,
+    path: &std::path::Path,
+    resolution: (u32, u32),
+) -> Result<(), Box<dyn std::error::Error>> {
     x_histogram(
         BitMapBackend::new(&path.join("x-histogram.png"), resolution).into_drawing_area(),
         game_reader,
@@ -37,20 +41,6 @@ pub fn gen_plots(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Err
         BitMapBackend::new(&path.join("y-histogram.png"), resolution).into_drawing_area(),
         game_reader,
     )?;
-
-    if game_reader.args.svg {
-        x_histogram(
-            SVGBackend::new(&path.join("x-histogram.svg"), resolution).into_drawing_area(),
-            &game_reader,
-            resolution,
-        )?;
-        averages(
-            SVGBackend::new(&path.join("2-var.svg"), resolution).into_drawing_area(),
-            &game_reader,
-            resolution,
-        )?;
-    }
-
     Ok(())
 }
 
@@ -81,6 +71,13 @@ fn two_var(
             resolution,
         )?;
     }
+    if game_reader.args.residuals {
+        residuals(
+            BitMapBackend::new(&path.join("residuals.png"), resolution).into_drawing_area(),
+            game_reader,
+            resolution,
+        )?;
+    }
     Ok(())
 }
 
@@ -107,7 +104,6 @@ fn gen_path(path: &str) -> std::io::Result<PathBuf> {
 
 pub enum GraphType {
     Average,
-    Quartiles,
     All,
     RelativeFrequencyX,
     RelativeFrequencyY,
@@ -133,7 +129,6 @@ pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> Stri
     let title = match graph_type {
         GraphType::All => "All",
         GraphType::Average => "Average TTM",
-        GraphType::Quartiles => "TTM Quartiles (1,2,3)",
         GraphType::RelativeFrequencyX => "RF of Time Left",
         GraphType::RelativeFrequencyY => "RF of TTM",
     };
