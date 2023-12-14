@@ -1,8 +1,12 @@
 use nalgebra::{DMatrix, DVector, SVD};
 
+use crate::plots::two_var::residuals;
+
 // complete honesty here, i did not write this code
 // as of the time of me writing this, i don't know a lot about matrix algebra.
 // so i wasn't able to write my own implementation by hand to solve AX = B for quadratic regression.
+
+/// Returns three coefficients
 pub fn quadratic_regression(
     x_values: &Vec<f64>,
     y_values: &Vec<f64>,
@@ -17,28 +21,39 @@ pub fn quadratic_regression(
 
     Ok((result[0], result[1], result[2]))
 }
-// the formula can be found here:
-// https://www.scribbr.com/statistics/pearson-correlation-coefficient/
-// or anywhere i guess
-pub fn pearson_correlation(x: &[f64], y: &[f64]) -> f64 {
-    let n = x.len() as f64;
+// TODO: implement testing for this function
 
-    let sum_x: f64 = x.iter().sum();
-    let sum_y: f64 = y.iter().sum();
+pub fn generate_residuals(
+    x_values: &Vec<f64>,
+    y_values: &Vec<f64>,
+) -> Result<Vec<f64>, Box<dyn std::error::Error>> {
+    let r = quadratic_regression(x_values, y_values)?;
+    let predicted_y = x_values
+        .iter()
+        .map(|x| r.0 * (x * x) + r.1 * x + r.2)
+        .collect::<Vec<_>>();
 
-    let sum_xy: f64 = x.iter().zip(y.iter()).map(|(&xi, &yi)| xi * yi).sum();
-    let sum_x_squared: f64 = x.iter().map(|&xi| xi * xi).sum();
-    let sum_y_squared: f64 = y.iter().map(|&yi| yi * yi).sum();
+    Ok(y_values
+        .iter()
+        .zip(predicted_y)
+        .collect::<Vec<(_, _)>>()
+        .iter()
+        .map(|(actual, predicted)| **actual - *predicted)
+        .collect::<Vec<_>>())
+}
+// you're filled with determination!!
+pub fn determination(
+    x_values: &Vec<f64>,
+    y_values: &Vec<f64>,
+) -> Result<f64, Box<dyn std::error::Error>> {
+    let sse: f64 = generate_residuals(x_values, y_values)?
+        .iter()
+        .map(|y| y.powi(2))
+        .sum();
+    let mean = y_values.iter().sum::<f64>() / y_values.len() as f64;
+    let sst: f64 = y_values.iter().map(|y| (*y - mean).powi(2)).sum();
 
-    let numerator = n * sum_xy - sum_x * sum_y;
-    let denominator =
-        ((n * sum_x_squared - sum_x.powi(2)) * (n * sum_y_squared - sum_y.powi(2))).sqrt();
-
-    if denominator == 0.0 {
-        return 0.0;
-    }
-
-    numerator / denominator
+    Ok(1.0 - (sse / sst))
 }
 
 #[cfg(test)]
@@ -68,15 +83,12 @@ mod tests {
         );
         assert_eq!(rounded, (0.2484, 0.2837, 9.8881));
     }
-    // data and results were sourced from wolframalpha:
-    // https://www.wolframalpha.com/widgets/view.jsp?id=53a3838163d5fe3d2dc7a3dfd448758
-    // so i hope this is right :D
     #[test]
-    fn pearson_correlation() {
-        let xs = [1.0, 2.0, 3.0, 4.0];
-        let ys = [5.0, 9.0, 7.0, 10.0];
-        let res = super::pearson_correlation(&xs, &ys);
-        let rounded = round_to_decimal_digits(res, 6);
-        assert_eq!(rounded, 0.756889);
+    fn determination() {
+        let x_values = vec![312.0, 13.0, 14.0, 15.0, 15.0, 22.0, 27.0];
+        let y_values = vec![11.0, 13.0, 14.0, 14.0, 15.0, 16.0, 18.0];
+        let res = super::determination(&x_values, &y_values).unwrap();
+        let rounded = round_to_decimal_digits(res, 4);
+        assert_eq!(res, 0.8368);
     }
 }

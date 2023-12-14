@@ -1,5 +1,5 @@
 use super::plotter::{generate_caption, GraphType};
-use crate::analysis::quadratic_regression;
+use crate::analysis::{generate_residuals, quadratic_regression};
 use crate::reader::GameReader;
 use plotters::drawing::DrawingArea;
 use plotters::{coord::Shift, prelude::*};
@@ -87,7 +87,7 @@ where
                 r.0 as f32 * x as f32 * x as f32 + r.1 as f32 * x as f32 + r.2 as f32,
             )
         }),
-        &RED,
+        &GREEN,
     ))?;
     /*
     chart.draw_series(game_reader.time_data.iter().enumerate().flat_map(|(i, v)| {
@@ -95,6 +95,70 @@ where
             .map(move |&y| Circle::new((i as f32, y as f32), 1, BLUE.mix(0.01)))
     }))?;
     */
+    chart.configure_series_labels().draw()?;
+    root.present()?;
+    Ok(())
+}
+pub fn residuals<T>(
+    root: DrawingArea<T, Shift>,
+    game_reader: &GameReader,
+    resolution: (u32, u32),
+) -> Result<(), Box<dyn Error + 'static>>
+where
+    T: IntoDrawingArea,
+    <T as DrawingBackend>::ErrorType: 'static,
+{
+    let color = RED;
+
+    // ----- DATA ----- //
+    let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
+        .unzip();
+    let residual_y = generate_residuals(&x_values, &y_values)?;
+
+    let points = x_values
+        .iter()
+        .zip(residual_y)
+        .map(|(x, y)| Circle::new((*x as f32, y as f32), 2, BLUE.mix(0.05).filled()));
+
+    // create an iterator of points to create our scatterplot
+
+    let max_x = game_reader.max_allowed_time as f32;
+    let max_y = 100f32;
+
+    // ----- chart stuff ----- //
+    root.fill(&WHITE)?;
+    // u32
+    let area = resolution.0 * resolution.1;
+    let mut chart = ChartBuilder::on(&root)
+        .caption(
+            generate_caption(GraphType::Average, game_reader),
+            ("sans-serif", 25).into_font(),
+        )
+        .margin(35)
+        .set_label_area_size(LabelAreaPosition::Left, 100)
+        .set_label_area_size(LabelAreaPosition::Bottom, 100)
+        .build_cartesian_2d(max_x..0f32, 0f32..max_y)?;
+
+    chart
+        .configure_mesh()
+        .y_desc("TTM (S)")
+        .x_desc("Time Left on Player Clock (S)")
+        .axis_desc_style(("sans-serif", 15))
+        .draw()?;
+
+    /*
+    chart.draw_series(game_reader.time_data.iter().enumerate().flat_map(|(i, v)| {
+        v.iter()
+            .map(move |&y| Circle::new((i as f32, y as f32), 1, BLUE.mix(0.01)))
+    }))?;
+    */
+
+    chart.draw_series(points)?;
+
     chart.configure_series_labels().draw()?;
     root.present()?;
     Ok(())

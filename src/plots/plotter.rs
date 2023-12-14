@@ -1,5 +1,5 @@
 use super::one_var::{x_histogram, y_histogram};
-use super::two_var::{all_points, averages, quartiles};
+use super::two_var::{all_points, averages, quartiles, residuals};
 use crate::reader::GameReader;
 use plotters::prelude::*;
 use std::{
@@ -22,6 +22,11 @@ pub fn gen_plots(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Err
 
     // print all of our 2-variable stuff
     two_var(game_reader, &path, resolution)?;
+    residuals(
+        BitMapBackend::new(&path.join("residuals.png"), resolution).into_drawing_area(),
+        game_reader,
+        resolution,
+    )?;
 
     x_histogram(
         BitMapBackend::new(&path.join("x-histogram.png"), resolution).into_drawing_area(),

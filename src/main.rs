@@ -12,7 +12,7 @@ use reader::GameReader;
 
 use plots::plotter::gen_plots;
 
-use crate::analysis::quadratic_regression;
+use crate::analysis::{determination, quadratic_regression};
 
 /* each point could be
 // - (time left, delta time)
@@ -65,5 +65,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));
 
     println!("Successfully generated a plot.");
+    println!();
+    let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
+        .unzip();
+    println!("{}", determination(&x_values, &y_values)?);
+
     Ok(())
 }
