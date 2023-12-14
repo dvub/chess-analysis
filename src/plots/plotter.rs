@@ -1,5 +1,5 @@
 use super::one_var::{x_histogram, y_histogram};
-use super::two_var::{all_points, averages, quartiles, residuals};
+use super::two_var::{all_points, averages, residuals};
 use crate::reader::GameReader;
 use plotters::prelude::*;
 use std::{
@@ -70,12 +70,6 @@ fn two_var(
     }
     if game_reader.args.quartiles {
         println!("Printing TTM quartiles graph...");
-        quartiles(
-            BitMapBackend::new(&path.join("2-var").join("ttm_quartiles.png"), resolution)
-                .into_drawing_area(),
-            game_reader,
-            resolution,
-        )?;
     }
 
     if game_reader.args.all {
