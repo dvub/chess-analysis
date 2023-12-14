@@ -12,7 +12,7 @@ use reader::GameReader;
 
 use plots::plotter::gen_plots;
 
-use crate::analysis::{determination, quadratic_regression};
+use crate::analysis::{determination, quadratic_regression, to_precision};
 
 /* each point could be
 // - (time left, delta time)
@@ -24,12 +24,8 @@ use crate::analysis::{determination, quadratic_regression};
 */
 
 // TODO:
-// - [x] break into smaller files
-// - [ ] implement clap
-// refactor & Optimize
-// export into BOTH pgn and svg
+// rework parameters to take 2 vectors instead of a gamereader
 // document with MD
-// split code
 // actually finish the fucking assignment LMAO
 // idk what else lol.
 
@@ -42,11 +38,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // open a bufreader
     let buf = BufReader::new(games);
     println!("Successfully found PGN file!");
+    println!("NOTE: games are read sequentially read and not randomly sampled.");
 
     // now, we will actually read the file and the games
     let mut reader = BufferedReader::new(buf);
     let mut game_reader = GameReader::new(args);
     println!("Reading all games. This will take a moment... Or a few, if you have a lot of games.");
+    println!();
     reader
         .read_all(&mut game_reader)
         .unwrap_or_else(|e| println!("An error occurred reading games:\n{}", e));
@@ -57,6 +55,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "A total of {} games were analyzed out of {}.",
         game_reader.games_analyzed, game_reader.total_games
     );
+    println!(
+        "A total of {} moves were analyzed.",
+        game_reader.moves_analyzed
+    );
+
     println!();
     println!("Now creating plot of data... This shouldn't take long. ");
     // println!("{:?}", game_reader.time_data);
@@ -64,15 +67,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     gen_plots(&game_reader)
         .unwrap_or_else(|e| println!("An error occurred generating plots:\n{}", e));
 
-    println!("Successfully generated a plot.");
-    println!();
+    println!("Successfully generated plots.");
     let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
         .time_data
         .iter()
         .enumerate()
         .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
         .unzip();
-    println!("{}", determination(&x_values, &y_values)?);
+    let det = determination(&x_values, &y_values)?;
+    println!();
+
+    println!("Regression Analysis");
+    let line = quadratic_regression(&x_values, &y_values)?;
+    println!(
+        "Quadratic Regression: {}x^2 {}x {}",
+        to_precision(line.0, 4),
+        to_precision(line.1, 4),
+        to_precision(line.2, 4)
+    );
+    println!("Coefficient of Determination (R^2) = {}", det);
+    println!(
+        "In other words, ~{}% of variance in TTM is explained by time remaining.",
+        (det * 100.0).round()
+    );
+    println!("Thus, the Correlation r = {}.", to_precision(det.sqrt(), 4));
 
     Ok(())
 }

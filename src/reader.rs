@@ -7,6 +7,7 @@ use pgn_reader::{Skip, Visitor};
 pub struct GameReader {
     pub games_analyzed: usize,
     pub total_games: usize,
+    pub moves_analyzed: usize,
     pub time_data: Vec<Vec<i32>>,
     pub args: Args,
     time_control_offset: i32,
@@ -43,6 +44,7 @@ impl GameReader {
             is_skipping: false,
             prev_times: [-1, -1],
             total_games: 0,
+            moves_analyzed: 0,
         }
     }
 
@@ -126,6 +128,7 @@ impl GameReader {
                 }
             }
         }
+        self.moves_analyzed += 1;
         Ok(())
     }
 }

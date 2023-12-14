@@ -76,7 +76,6 @@ where
         .enumerate()
         .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
         .unzip();
-    println!("{:?}", quadratic_regression(&x_values, &y_values).unwrap());
 
     let r = quadratic_regression(&x_values, &y_values)?;
 
