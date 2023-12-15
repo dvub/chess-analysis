@@ -1,6 +1,6 @@
 use clap::Parser;
 use pgn_reader::BufferedReader;
-use std::{fs::File, io::BufReader};
+use std::{fs::File, io::BufReader, time::Instant};
 
 mod analysis;
 mod args;
@@ -91,12 +91,18 @@ fn data_collection(game_reader: &mut GameReader) {
     let mut reader = BufferedReader::new(buf);
     println!("Reading all games. This will take a moment... Or a few, if you have a lot of games.");
     println!();
+    let start = Instant::now();
     reader
         .read_all(game_reader)
         .unwrap_or_else(|e| println!("An error occurred reading games:\n{}", e));
+    let duration = start.elapsed();
 
     // print some helpful information for the user
-    println!("Successfully finished reading games!");
+    println!(
+        "Successfully finished reading games! {}.{}s elapsed.",
+        duration.as_secs(),
+        duration.as_millis(),
+    );
     println!(
         "A total of {} games were analyzed out of {}.",
         game_reader.games_analyzed, game_reader.total_games
@@ -123,17 +129,15 @@ fn analysis(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> 
     let det = determination(&x_values, &y_values)?;
 
     println!(
-        "Quadratic Regression: {}x^2 {}x {}",
+        "Quadratic Regression: {}x^2 {}{}x {}{}",
         to_precision(line.0, 4),
+        if line.1.is_sign_positive() { "+" } else { "" },
         to_precision(line.1, 4),
+        if line.2.is_sign_positive() { "+" } else { "" },
         to_precision(line.2, 4)
     );
     println!("Coefficient of Determination (R^2) = {}", det);
-    println!(
-        "In other words, ~{}% of variance in TTM is explained by time remaining.",
-        (det * 100.0).round()
-    );
-    println!("Thus, the Correlation r = {}.", to_precision(det.sqrt(), 4));
+    println!("Correlation (r) = {}", to_precision(det.sqrt(), 4));
     println!();
     Ok(())
 }
