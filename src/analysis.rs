@@ -27,7 +27,7 @@ pub fn generate_residuals(
     let r = quadratic_regression(x_values, y_values)?;
     let predicted_y = x_values
         .iter()
-        .map(|x| r.0 * (x * x) + r.1 * x + r.2)
+        .map(|x| (r.0 * (x * x)) + (r.1 * x) + r.2)
         .collect::<Vec<_>>();
 
     Ok(y_values
@@ -60,10 +60,9 @@ pub fn to_precision(value: f64, decimal_digits: u32) -> f64 {
 
 #[cfg(test)]
 mod tests {
-
-    // example data was sourced from here
+    // test results sourced from:
     // https://goodcalculators.com/quadratic-regression-calculator/
-
+    // https://stapplet.com/quant2v.html
     use super::to_precision;
 
     #[test]
@@ -84,15 +83,17 @@ mod tests {
     }
     #[test]
     fn determination() {
-        let x_values = vec![
-            -5f64, -4f64, -3f64, -2f64, -1f64, 0f64, 1f64, 2f64, 3f64, 4f64,
-        ];
-        let y_values = vec![
+        let x_values = vec![-5.0, -4.0, -3.0, -2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 4.0];
+        let y1 = [
             12.55, 15.61, 10.20, 11.77, 10.24, 9.84, 8.07, 11.63, 12.82, 15.85,
         ];
-        let res = super::determination(&x_values, &y_values).unwrap();
+        let y2 = [9.0, 5.7, 6.5, 3.3, 1.9, 0.6, 1.2, 2.6, 5.3, 7.8];
+        let res = super::determination(&x_values, &y1.to_vec()).unwrap();
+        let res2 = super::determination(&x_values, &y2.to_vec()).unwrap();
         let rounded = to_precision(res.sqrt(), 4);
+        let rounded2 = to_precision(res2, 3);
 
         assert_eq!(rounded, 0.7691);
+        assert_eq!(rounded2, 0.889);
     }
 }
