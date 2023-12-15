@@ -1,7 +1,6 @@
-use super::one_var::{x_histogram, y_histogram};
-use super::two_var::{all_points, averages, residuals};
+use super::two_var::generate_two_var_plots;
+use crate::plots::one_var::generate_one_var_plots;
 use crate::reader::GameReader;
-use plotters::prelude::*;
 use std::{
     fs::create_dir,
     path::PathBuf,
@@ -10,7 +9,7 @@ use std::{
 
 // TODO: add helpful error messages
 
-pub fn gen_plots(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> {
+pub fn generate_plots(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> {
     let resolution = {
         if let Some(r) = game_reader.args.resolution {
             (r as u32, r as u32)
@@ -19,64 +18,10 @@ pub fn gen_plots(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Err
         }
     };
     let path = gen_path(&game_reader.args.output)?;
-
-    // print all of our 2-variable stuff
-    two_var(game_reader, &path, resolution)?;
+    generate_two_var_plots(game_reader, &path, resolution)?;
     if game_reader.args.one_var {
-        one_var(game_reader, &path, resolution)?;
-    }
-    Ok(())
-}
-fn one_var(
-    game_reader: &GameReader,
-    path: &std::path::Path,
-    resolution: (u32, u32),
-) -> Result<(), Box<dyn std::error::Error>> {
-    x_histogram(
-        BitMapBackend::new(&path.join("x-histogram.png"), resolution).into_drawing_area(),
-        game_reader,
-        resolution,
-    )?;
-    y_histogram(
-        BitMapBackend::new(&path.join("y-histogram.png"), resolution).into_drawing_area(),
-        game_reader,
-    )?;
-    Ok(())
-}
-
-fn two_var(
-    game_reader: &GameReader,
-    path: &std::path::Path,
-    resolution: (u32, u32),
-) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Printing average TTM graph...");
-    if game_reader.args.averages {
-        averages(
-            BitMapBackend::new(&path.join("2-var").join("ttm_averages.png"), resolution)
-                .into_drawing_area(),
-            game_reader,
-            resolution,
-        )?;
-    }
-    if game_reader.args.quartiles {
-        println!("Printing TTM quartiles graph...");
-    }
-
-    if game_reader.args.all {
-        println!("Printing all TTMs graph...");
-        all_points(
-            BitMapBackend::new(&path.join("2-var").join("all_ttm.png"), resolution)
-                .into_drawing_area(),
-            game_reader,
-            resolution,
-        )?;
-    }
-    if game_reader.args.residuals {
-        residuals(
-            BitMapBackend::new(&path.join("residuals.png"), resolution).into_drawing_area(),
-            game_reader,
-            resolution,
-        )?;
+        println!("Creating one-variable histograms...");
+        generate_one_var_plots(game_reader, &path, resolution)?;
     }
     Ok(())
 }
@@ -98,6 +43,7 @@ fn gen_path(path: &str) -> std::io::Result<PathBuf> {
     let new_path = path.join(unix_timestamp.to_string());
     create_dir(&new_path)?;
     create_dir(new_path.join("2-var"))?;
+    create_dir(new_path.join("1-var"))?;
 
     Ok(new_path)
 }
@@ -140,12 +86,20 @@ pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> Stri
 
 #[cfg(test)]
 mod tests {
-    use std::fs::read_dir;
+    use std::fs::{read_dir, remove_dir};
 
     #[test]
     fn test_path() {
-        super::gen_path("./test").unwrap();
-        let parent = read_dir("./test");
-        assert!(parent.is_ok());
+        let test_path = "./test";
+        let res = super::gen_path(test_path).unwrap();
+        assert!(read_dir(test_path).is_ok());
+        assert!(read_dir(&res).is_ok());
+        assert_eq!(read_dir(&res).unwrap().count(), 2);
+
+        // TODO: change this weirdness
+        remove_dir(res.join("1-var")).unwrap();
+        remove_dir(res.join("2-var")).unwrap();
+        remove_dir(res).unwrap();
+        remove_dir(test_path).unwrap();
     }
 }

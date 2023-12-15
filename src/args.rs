@@ -48,6 +48,8 @@ pub struct Args {
 
     #[arg(long)]
     pub one_var: bool,
+    #[arg(long)]
+    pub overlay_regression: bool,
 
     #[arg(short, long)]
     /// Enable this option to output SVG files in addition to the default PNG output. (the better kind)

@@ -7,7 +7,26 @@ use std::error::Error;
 
 use super::plotter::generate_caption;
 
-pub fn x_histogram<T>(
+pub fn generate_one_var_plots(
+    game_reader: &GameReader,
+    path: &std::path::Path,
+    resolution: (u32, u32),
+) -> Result<(), Box<dyn std::error::Error>> {
+    x_histogram(
+        BitMapBackend::new(&path.join("1-var").join("x-histogram.png"), resolution)
+            .into_drawing_area(),
+        game_reader,
+        resolution,
+    )?;
+    y_histogram(
+        BitMapBackend::new(&path.join("1-var").join("y-histogram.png"), resolution)
+            .into_drawing_area(),
+        game_reader,
+    )?;
+    Ok(())
+}
+
+fn x_histogram<T>(
     root: DrawingArea<T, Shift>,
     game_reader: &GameReader,
     _resolution: (u32, u32),
@@ -60,7 +79,7 @@ where
     //
     Ok(())
 }
-pub fn y_histogram<T>(
+fn y_histogram<T>(
     root: DrawingArea<T, Shift>,
     game_reader: &GameReader,
 ) -> Result<(), Box<dyn Error + 'static>>
