@@ -54,4 +54,9 @@ pub struct Args {
     #[arg(short, long)]
     /// Enable this option to output SVG files in addition to the default PNG output. (the better kind)
     pub svg: bool,
+
+    #[arg(long)]
+    pub x_percentile: Option<i32>,
+    #[arg(long)]
+    pub y_percentile: Option<i32>,
 }

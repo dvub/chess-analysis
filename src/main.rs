@@ -14,15 +14,6 @@ use plots::plotter::generate_plots;
 
 use crate::analysis::{determination, quadratic_regression, to_precision};
 
-/* each point could be
-// - (time left, delta time)
-//      = one point per move
-// - (time left, average time for x)
-//      = one point per x axis value <- like this one the best so far
-// - (time left, averave time taken per move per game)
-//      = one point per game
-*/
-
 // TODO:
 // rework parameters to take 2 vectors instead of a gamereader
 // document with MD
@@ -37,9 +28,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut game_reader = GameReader::new(&args);
     data_collection(&mut game_reader);
     plots(&game_reader);
+    one_var_analysis(&game_reader);
     analysis(&game_reader)?;
     Ok(())
 }
+fn one_var_analysis(game_reader: &GameReader) {
+    //
+    println!();
+    println!(" --- One variable analysis --- ");
+    println!();
+
+    let (mut x_values, mut y_values): (Vec<i32>, Vec<i32>) = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .flat_map(|(x, row)| row.iter().map(move |&y| (x as i32, y)))
+        .unzip();
+
+    x_values.sort();
+    y_values.sort();
+
+    if let Some(percentile) = game_reader.args.x_percentile {
+        let idx = (x_values.len() as f64 * (percentile as f64 / 100.0)) as usize;
+        println!(
+            "The {}th percentile of time left is {} seconds remaining",
+            percentile, x_values[idx]
+        );
+    }
+    if let Some(percentile) = game_reader.args.y_percentile {
+        let idx = (y_values.len() as f64 * (percentile as f64 / 100.0)) as usize;
+        println!(
+            "The {}th percentile of time taken is {} seconds to move",
+            percentile, y_values[idx]
+        );
+    }
+}
+
+// whatever (bladee)
+
 fn plots(game_reader: &GameReader) {
     println!();
     println!(" --- Plots --- ");
@@ -108,5 +134,6 @@ fn analysis(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> 
         (det * 100.0).round()
     );
     println!("Thus, the Correlation r = {}.", to_precision(det.sqrt(), 4));
+    println!();
     Ok(())
 }
