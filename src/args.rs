@@ -31,10 +31,6 @@ pub struct Args {
     #[arg(short, long)]
     /// Set the resolution of the output images (1:1 ratio). Default is 1000 pixels.
     pub resolution: Option<i32>,
-
-    /// Enable this option to create a 2-variable graph showing the median, first, and third quartile of TTMs.
-    #[arg(short, long)]
-    pub quartiles: bool,
     /// Enable this option to create a scatterplot showing the time data for all moves in the dataset.
     #[arg(short = 'A', long)]
     pub all: bool,

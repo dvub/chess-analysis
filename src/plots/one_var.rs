@@ -36,7 +36,7 @@ where
     <T as DrawingBackend>::ErrorType: 'static,
 {
     // ----- DATA -----
-    let num_buckets = 8;
+    let num_buckets = 10;
     let bucket_size = game_reader.max_allowed_time as f32 / num_buckets as f32;
     let max_x = game_reader.max_allowed_time as f32 + bucket_size;
     let sum = game_reader
@@ -96,9 +96,9 @@ where
         .collect::<Vec<&i32>>();
 
     let total = all_moves.len();
-    let num_buckets = 100;
-    let bucket_size = game_reader.max_allowed_time as f32 / num_buckets as f32;
-    let max_x = 100.0;
+    let num_buckets = 10;
+    let max_x = game_reader.max_allowed_time as f32 / 10.0;
+    let bucket_size = max_x / num_buckets as f32;
 
     let data = all_moves.iter().map(|v| (**v as f32, 1f32 / total as f32));
 

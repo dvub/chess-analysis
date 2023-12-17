@@ -30,10 +30,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     plots(&game_reader);
     one_var_analysis(&game_reader);
     analysis(&game_reader)?;
+
+    let mut c = 0;
+    game_reader.time_data[150].iter().for_each(|t| {
+        if *t < 10 {
+            c += 1;
+        }
+    });
+    let conditional = c as f32 / game_reader.time_data[150].len() as f32;
+    println!(
+        "Probability that TTM < 10s, given 150s left: {}",
+        conditional
+    );
+
+    let expected = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .map(|(i, v)| {
+            let p = v.len() as f32 / game_reader.moves_analyzed as f32;
+            i as f32 * p
+        })
+        .sum::<f32>();
+    println!("Expected time remaining: {:.2}", expected);
+    let (x_values, _y_values): (Vec<i32>, Vec<i32>) = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .flat_map(|(x, row)| row.iter().map(move |&y| (x as i32, y)))
+        .unzip();
+
+    let average = x_values.iter().sum::<i32>() as f32 / x_values.len() as f32;
+    println!("{}", x_values.len());
+    println!("Average time remaining: {:.2}", average);
+
+    let variance = game_reader
+        .time_data
+        .iter()
+        .enumerate()
+        .map(|(i, v)| {
+            (i as f32 - expected).powi(2) * (v.len() as f32 / game_reader.moves_analyzed as f32)
+        })
+        .sum::<f32>();
+    println!("Variance: {}", variance);
+    println!("Standard deviation: {}", variance.sqrt());
     Ok(())
 }
 fn one_var_analysis(game_reader: &GameReader) {
-    //
+    if game_reader.args.x_percentile.is_none() && game_reader.args.y_percentile.is_none() {
+        return;
+    }
+
     println!();
     println!(" --- One variable analysis --- ");
     println!();
@@ -136,8 +183,10 @@ fn analysis(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> 
         if line.2.is_sign_positive() { "+" } else { "" },
         to_precision(line.2, 4)
     );
+
     println!("Coefficient of Determination (R^2) = {}", det);
     println!("Correlation (r) = {}", to_precision(det.sqrt(), 4));
+
     println!();
     Ok(())
 }

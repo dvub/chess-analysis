@@ -124,11 +124,12 @@ impl GameReader {
                         // update our previous values
                         self.prev_times[1] = self.prev_times[0];
                         self.prev_times[0] = remaining_time;
+                        self.moves_analyzed += 1;
                     }
                 }
             }
         }
-        self.moves_analyzed += 1;
+
         Ok(())
     }
 }
