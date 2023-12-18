@@ -191,3 +191,49 @@ fn convert_time(time: &str) -> Result<i32, Box<dyn std::error::Error>> {
     let seconds = str::parse::<i32>(units.next().unwrap())?;
     Ok(hours * 3600 + minutes * 60 + seconds)
 }
+/*
+        let comment = &comment.0[2..comment.0.len() - 2];
+        if &comment[0..4] == b"%clk" {
+            let remaining_time = convert_time(&comment[5..]);
+            if remaining_time <= self.max_allowed_time {
+                // initialize first moves
+                // very important!!
+                if self.prev_times[1] == -1 {
+                    self.prev_times[1] = remaining_time;
+                } else if self.prev_times[0] == -1 {
+                    self.prev_times[0] = remaining_time;
+                } else {
+                    // if we have initialized our first 2 moves, then we can actually start measuring things
+                    let delta_time =
+                        self.prev_times[1] - (remaining_time - self.time_control_offset);
+                    self.time_data[remaining_time as usize].push(delta_time);
+
+                    // update our previous values
+                    self.prev_times[1] = self.prev_times[0];
+                    self.prev_times[0] = remaining_time;
+                    self.moves_analyzed += 1;
+                }
+            }
+        }
+        fn convert_time(mut time: &[u8]) -> i32 {
+    // convert time into a number of seconds
+    fn colon(time: &mut &[u8]) -> u8 {
+        let mut s = 0;
+        loop {
+            let byte = time[0];
+            *time = &time[1..];
+            if byte == b':' {
+                return s;
+            }
+            s = s * 10 + (byte - b'0');
+        }
+    }
+    let hours = colon(&mut time);
+    let minutes = colon(&mut time);
+    let mut seconds = 0;
+    for &byte in time {
+        seconds = seconds * 10 + (byte - b'0');
+    }
+    hours as i32 * 3600 + minutes as i32 * 60 + seconds as i32
+}
+        */
