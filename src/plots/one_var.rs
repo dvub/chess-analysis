@@ -23,6 +23,19 @@ pub fn generate_one_var_plots(
             .into_drawing_area(),
         game_reader,
     )?;
+    if game_reader.args.svg {
+        x_histogram(
+            SVGBackend::new(&path.join("1-var").join("x-histogram.svg"), resolution)
+                .into_drawing_area(),
+            game_reader,
+            resolution,
+        )?;
+        y_histogram(
+            SVGBackend::new(&path.join("1-var").join("y-histogram.svg"), resolution)
+                .into_drawing_area(),
+            game_reader,
+        )?;
+    }
     Ok(())
 }
 

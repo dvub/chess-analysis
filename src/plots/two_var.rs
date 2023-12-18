@@ -20,6 +20,14 @@ pub fn generate_two_var_plots(
             game_reader,
             resolution,
         )?;
+        if game_reader.args.svg {
+            averages(
+                SVGBackend::new(&path.join("2-var").join("ttm_averages.svg"), resolution)
+                    .into_drawing_area(),
+                game_reader,
+                resolution,
+            )?;
+        }
     }
     if game_reader.args.all {
         println!("Creating all TTMs graph...");
@@ -29,6 +37,14 @@ pub fn generate_two_var_plots(
             game_reader,
             resolution,
         )?;
+        if game_reader.args.svg {
+            all_points(
+                SVGBackend::new(&path.join("2-var").join("all_ttm.svg"), resolution)
+                    .into_drawing_area(),
+                game_reader,
+                resolution,
+            )?;
+        }
     }
     if game_reader.args.residuals {
         residuals(
@@ -37,6 +53,14 @@ pub fn generate_two_var_plots(
             game_reader,
             resolution,
         )?;
+        if game_reader.args.svg {
+            residuals(
+                SVGBackend::new(&path.join("2-var").join("residuals.svg"), resolution)
+                    .into_drawing_area(),
+                game_reader,
+                resolution,
+            )?;
+        }
     }
     Ok(())
 }
@@ -145,7 +169,7 @@ where
     let _area = resolution.0 * resolution.1;
     let mut chart = ChartBuilder::on(&root)
         .caption(
-            generate_caption(GraphType::Average, game_reader),
+            generate_caption(GraphType::Residuals, game_reader),
             ("sans-serif", 25).into_font(),
         )
         .margin(35)
@@ -177,7 +201,7 @@ where
 {
     let all_points = game_reader.time_data.iter().enumerate().flat_map(|(i, v)| {
         v.iter()
-            .map(move |&y| Circle::new((i as f32, y as f32), 2, BLUE.mix(0.05).filled()))
+            .map(move |&y| Circle::new((i as f32, y as f32), 2, BLUE.mix(0.01).filled()))
     });
     let max_x = game_reader.max_allowed_time as f32;
     // ----- CHART ----- //
@@ -200,6 +224,26 @@ where
         .draw()?;
 
     chart.draw_series(all_points)?;
+    if game_reader.args.overlay_regression {
+        let (x_values, y_values): (Vec<f64>, Vec<f64>) = game_reader
+            .time_data
+            .iter()
+            .enumerate()
+            .flat_map(|(x, row)| row.iter().map(move |&y| (x as f64, y as f64)))
+            .unzip();
+
+        let r = quadratic_regression(&x_values, &y_values)?;
+
+        chart.draw_series(LineSeries::new(
+            (0..max_x as usize).map(|x| {
+                (
+                    x as f32,
+                    r.0 as f32 * x as f32 * x as f32 + r.1 as f32 * x as f32 + r.2 as f32,
+                )
+            }),
+            GREEN.stroke_width(2),
+        ))?;
+    }
     chart.configure_series_labels().draw()?;
     root.present()?;
 

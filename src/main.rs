@@ -12,13 +12,22 @@ use reader::GameReader;
 
 use plots::plotter::generate_plots;
 
-use crate::analysis::{determination, quadratic_regression, to_precision};
+use crate::analysis::{
+    determination, generate_residuals, quadratic_regression, standard_deviation, to_precision,
+};
 
 // TODO:
 // rework parameters to take 2 vectors instead of a gamereader
 // document with MD
 // actually finish the fucking assignment LMAO
 // idk what else lol.
+
+/*
+read 4096 pgns out of the file
+relatively light, cant be more than 50mb
+and then feed that to 4 threads
+and keep a buffer of 4 1024 pgns to pass out from the main thread
+ */
 
 // cargo run --release -- games/oct-2023-games.pgn -m 1000 --min-rating 1000 --max-rating 2000 --time-control 600+0
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -33,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut c = 0;
     game_reader.time_data[150].iter().for_each(|t| {
-        if *t < 10 {
+        if *t == 10 {
             c += 1;
         }
     });
@@ -48,7 +57,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .enumerate()
         .map(|(i, v)| {
-            let p = v.len() as f32 / game_reader.moves_analyzed as f32;
+            let p = 1.0 / game_reader.max_allowed_time as f32;
             i as f32 * p
         })
         .sum::<f32>();
@@ -64,16 +73,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", x_values.len());
     println!("Average time remaining: {:.2}", average);
 
-    let variance = game_reader
-        .time_data
-        .iter()
-        .enumerate()
-        .map(|(i, v)| {
-            (i as f32 - expected).powi(2) * (v.len() as f32 / game_reader.moves_analyzed as f32)
-        })
-        .sum::<f32>();
-    println!("Variance: {}", variance);
-    println!("Standard deviation: {}", variance.sqrt());
+    let stdev = standard_deviation(&x_values.iter().map(|f| *f as f64).collect::<Vec<_>>());
+    println!("Standard Deviation: {}", stdev);
+    println!("Variance: {}", stdev.powi(2));
     Ok(())
 }
 fn one_var_analysis(game_reader: &GameReader) {
@@ -91,8 +93,8 @@ fn one_var_analysis(game_reader: &GameReader) {
         .enumerate()
         .flat_map(|(x, row)| row.iter().map(move |&y| (x as i32, y)))
         .unzip();
-
     x_values.sort();
+    x_values.reverse();
     y_values.sort();
 
     if let Some(percentile) = game_reader.args.x_percentile {
@@ -174,6 +176,8 @@ fn analysis(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> 
 
     let line = quadratic_regression(&x_values, &y_values)?;
     let det = determination(&x_values, &y_values)?;
+    let residuals = generate_residuals(&x_values, &y_values)?;
+    let stdev = standard_deviation(&residuals);
 
     println!(
         "Quadratic Regression: {}x^2 {}{}x {}{}",
@@ -186,6 +190,7 @@ fn analysis(game_reader: &GameReader) -> Result<(), Box<dyn std::error::Error>> 
 
     println!("Coefficient of Determination (R^2) = {}", det);
     println!("Correlation (r) = {}", to_precision(det.sqrt(), 4));
+    println!("Residuals Standard Deviation: {stdev}");
 
     println!();
     Ok(())

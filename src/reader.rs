@@ -189,8 +189,24 @@ fn convert_time(time: &str) -> Result<i32, Box<dyn std::error::Error>> {
     let hours = str::parse::<i32>(units.next().unwrap())?;
     let minutes = str::parse::<i32>(units.next().unwrap())?;
     let seconds = str::parse::<i32>(units.next().unwrap())?;
-    Ok(hours * 3600 + minutes * 60 + seconds)
+    let res = hours * 3600 + minutes * 60 + seconds;
+
+    Ok(res)
 }
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn conversion() {
+        use super::convert_time;
+        assert_eq!(convert_time("0:0:0").unwrap(), 0);
+        assert_eq!(convert_time("00:00:00").unwrap(), 0);
+        assert_eq!(convert_time("0:0:1").unwrap(), 1);
+        assert_eq!(convert_time("0:1:01").unwrap(), 61);
+        assert_eq!(convert_time("00:01:01").unwrap(), 61);
+        assert_eq!(convert_time("01:01:01").unwrap(), 3661);
+    }
+}
+
 /*
         let comment = &comment.0[2..comment.0.len() - 2];
         if &comment[0..4] == b"%clk" {

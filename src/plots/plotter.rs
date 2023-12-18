@@ -53,6 +53,7 @@ pub enum GraphType {
     All,
     RelativeFrequencyX,
     RelativeFrequencyY,
+    Residuals,
 }
 
 pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> String {
@@ -77,6 +78,7 @@ pub fn generate_caption(graph_type: GraphType, game_reader: &GameReader) -> Stri
         GraphType::Average => "Average TTM",
         GraphType::RelativeFrequencyX => "RF of Time Left",
         GraphType::RelativeFrequencyY => "RF of TTM",
+        GraphType::Residuals => "Residuals",
     };
     format!(
         "{} ({}, {} seconds, {} Games)",

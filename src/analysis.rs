@@ -58,6 +58,15 @@ pub fn to_precision(value: f64, decimal_digits: u32) -> f64 {
     (value * multiplier as f64).round() / multiplier as f64
 }
 
+pub fn standard_deviation(data: &[f64]) -> f64 {
+    let mean = data.iter().sum::<f64>() / data.len() as f64;
+
+    let squared_diff_sum: f64 = data.iter().map(|&x| (x - mean).powi(2)).sum();
+    let variance = squared_diff_sum / (data.len() - 1) as f64;
+
+    variance.sqrt()
+}
+
 #[cfg(test)]
 mod tests {
     // test results sourced from:
@@ -95,5 +104,45 @@ mod tests {
 
         assert_eq!(rounded, 0.7691);
         assert_eq!(rounded2, 0.889);
+    }
+    #[test]
+    fn split_nested() {
+        let data = [[0, 1, 2], [3, 4, 5], [6, 7, 8]];
+        let (x_values, y_values): (Vec<i32>, Vec<i32>) = data
+            .iter()
+            .enumerate()
+            .flat_map(|(x, row)| row.iter().map(move |&y| (x as i32, y)))
+            .unzip();
+        assert_eq!(x_values.len(), 9);
+        assert_eq!(x_values, [0, 0, 0, 1, 1, 1, 2, 2, 2]);
+        assert_eq!(y_values.len(), 9);
+    }
+    #[test]
+    fn standard_devation() {
+        let data = [10.0, 12.0, 23.0, 23.0, 16.0, 23.0, 21.0, 16.0];
+        assert_eq!(super::standard_deviation(&data), 5.237229365663817);
+    }
+    #[test]
+    fn residual_standard_deviation() {
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        let y = vec![10.0, 8.0, 6.0, 4.0, 2.0, 1.0, 3.0, 5.0, 7.0, 10.0];
+        let residuals = super::generate_residuals(&x, &y).unwrap();
+        let stdev = super::standard_deviation(&residuals);
+        assert_eq!(stdev, 0.802);
+    }
+    #[test]
+    fn residuals() {
+        let x = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0];
+        let y = vec![10.0, 8.0, 6.0, 4.0, 2.0, 1.0, 3.0, 5.0, 7.0, 10.0];
+        let mut residuals = super::generate_residuals(&x, &y)
+            .unwrap()
+            .iter()
+            .map(|f| to_precision(*f, 3))
+            .collect::<Vec<_>>();
+        residuals.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert_eq!(
+            residuals,
+            vec![-1.339, -0.855, -0.436, -0.045, 0.018, 0.133, 0.445, 0.455, 0.664, 0.961]
+        )
     }
 }
